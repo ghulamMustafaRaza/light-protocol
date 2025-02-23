@@ -1,0 +1,73 @@
+use crate::state::{CompressedTokenInstructionDataTransfer, InputTokenDataWithContext};
+#[cfg(feature = "anchor")]
+use anchor_lang::AnchorSerialize;
+#[cfg(not(feature = "anchor"))]
+use borsh::BorshSerialize as AnchorSerialize;
+use light_compressed_account::instruction_data::compressed_proof::CompressedProof;
+use solana_program::instruction::{AccountMeta, Instruction};
+use solana_program::program_error::ProgramError;
+use solana_program::pubkey::Pubkey;
+
+use crate::cpi::accounts::CompressedTokenDecompressCpiAccounts;
+/// Return Instruction to decompress compressed token accounts.
+pub fn decompress_token_instruction(
+    mint: &Pubkey,
+    compressed_token_accounts: Vec<InputTokenDataWithContext>,
+    proof: &CompressedProof,
+    light_cpi_accounts: &CompressedTokenDecompressCpiAccounts,
+) -> Result<Instruction, ProgramError> {
+    let data = decompress_token_instruction_data(mint, proof, compressed_token_accounts);
+
+    let accounts = vec![
+        AccountMeta::new(*light_cpi_accounts.fee_payer.key, true),
+        AccountMeta::new_readonly(*light_cpi_accounts.authority.key, true), //TODO: CHECK SIGNING
+        AccountMeta::new_readonly(*light_cpi_accounts.cpi_authority_pda.key, true),
+        AccountMeta::new_readonly(*light_cpi_accounts.light_system_program.key, false),
+        AccountMeta::new_readonly(*light_cpi_accounts.registered_program_pda.key, false),
+        AccountMeta::new_readonly(*light_cpi_accounts.noop_program.key, false),
+        AccountMeta::new_readonly(*light_cpi_accounts.account_compression_authority.key, false),
+        AccountMeta::new_readonly(*light_cpi_accounts.account_compression_program.key, false),
+        AccountMeta::new_readonly(*light_cpi_accounts.self_program.key, false),
+        AccountMeta::new(*light_cpi_accounts.token_pool_pda.key, false),
+        AccountMeta::new(*light_cpi_accounts.decompress_destination.key, false),
+        AccountMeta::new_readonly(*light_cpi_accounts.token_program.key, false),
+        AccountMeta::new_readonly(*light_cpi_accounts.system_program.key, false),
+    ];
+
+    Ok(Instruction {
+        program_id: *light_cpi_accounts.token_program.key,
+        accounts,
+        data,
+    })
+}
+
+/// Return Instruction Data to decompress compressed token accounts.
+pub fn decompress_token_instruction_data(
+    mint: &Pubkey,
+    proof: &CompressedProof,
+    compressed_token_accounts: Vec<InputTokenDataWithContext>,
+) -> Vec<u8> {
+    let amount = compressed_token_accounts
+        .iter()
+        .map(|data| data.amount)
+        .sum();
+
+    let compressed_token_instruction_data_transfer = CompressedTokenInstructionDataTransfer {
+        proof: Some(*proof),
+        mint: *mint,
+        delegated_transfer: None,
+        input_token_data_with_context: compressed_token_accounts,
+        output_compressed_accounts: Vec::new(),
+        is_compress: false,
+        compress_or_decompress_amount: Some(amount),
+        cpi_context: None,
+        lamports_change_account_merkle_tree_index: None,
+    };
+
+    let mut inputs = Vec::new();
+
+    compressed_token_instruction_data_transfer
+        .serialize(&mut inputs)
+        .unwrap();
+    inputs
+}
