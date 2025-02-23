@@ -17,10 +17,11 @@ use crate::{
 };
 
 /// Return Instruction to decompress compressed token accounts.
+/// Proof can be None if prove_by_index is used.
 pub fn decompress(
     mint: &Pubkey,
     compressed_token_accounts: Vec<InputTokenDataWithContext>,
-    proof: &CompressedProof,
+    proof: &Option<CompressedProof>,
     light_cpi_accounts: &CompressedTokenDecompressCpiAccounts,
     cpi_context: Option<&CompressedCpiContext>,
 ) -> Result<Instruction, ProgramError> {
@@ -55,7 +56,7 @@ pub fn decompress(
 /// Return Instruction Data to decompress compressed token accounts.
 pub fn decompress_token_instruction_data(
     mint: &Pubkey,
-    proof: &CompressedProof,
+    proof: &Option<CompressedProof>,
     compressed_token_accounts: Vec<InputTokenDataWithContext>,
     cpi_context: Option<&CompressedCpiContext>,
 ) -> Vec<u8> {
@@ -65,7 +66,7 @@ pub fn decompress_token_instruction_data(
         .sum();
 
     let compressed_token_instruction_data_transfer = CompressedTokenInstructionDataTransfer {
-        proof: Some(*proof),
+        proof: *proof,
         mint: *mint,
         delegated_transfer: None,
         input_token_data_with_context: compressed_token_accounts,
