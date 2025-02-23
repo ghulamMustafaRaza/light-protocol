@@ -17,7 +17,7 @@ use crate::{
 };
 
 /// Return Instruction to decompress compressed token accounts.
-pub fn decompress_token_instruction(
+pub fn decompress(
     mint: &Pubkey,
     compressed_token_accounts: Vec<InputTokenDataWithContext>,
     proof: &CompressedProof,
