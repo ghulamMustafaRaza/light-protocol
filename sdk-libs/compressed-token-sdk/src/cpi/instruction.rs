@@ -2,7 +2,9 @@
 use anchor_lang::AnchorSerialize;
 #[cfg(not(feature = "anchor"))]
 use borsh::BorshSerialize as AnchorSerialize;
-use light_compressed_account::instruction_data::compressed_proof::CompressedProof;
+use light_compressed_account::instruction_data::{
+    compressed_proof::CompressedProof, cpi_context::CompressedCpiContext,
+};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     program_error::ProgramError,
@@ -13,18 +15,21 @@ use crate::{
     cpi::accounts::CompressedTokenDecompressCpiAccounts,
     state::{CompressedTokenInstructionDataTransfer, InputTokenDataWithContext},
 };
+
 /// Return Instruction to decompress compressed token accounts.
 pub fn decompress_token_instruction(
     mint: &Pubkey,
     compressed_token_accounts: Vec<InputTokenDataWithContext>,
     proof: &CompressedProof,
     light_cpi_accounts: &CompressedTokenDecompressCpiAccounts,
+    cpi_context: Option<&CompressedCpiContext>,
 ) -> Result<Instruction, ProgramError> {
-    let data = decompress_token_instruction_data(mint, proof, compressed_token_accounts);
+    let data =
+        decompress_token_instruction_data(mint, proof, compressed_token_accounts, cpi_context);
 
     let accounts = vec![
         AccountMeta::new(*light_cpi_accounts.fee_payer.key, true),
-        AccountMeta::new_readonly(*light_cpi_accounts.authority.key, true), //TODO: CHECK SIGNING
+        AccountMeta::new_readonly(*light_cpi_accounts.authority.key, true),
         AccountMeta::new_readonly(*light_cpi_accounts.cpi_authority_pda.key, true),
         AccountMeta::new_readonly(*light_cpi_accounts.light_system_program.key, false),
         AccountMeta::new_readonly(*light_cpi_accounts.registered_program_pda.key, false),
@@ -52,6 +57,7 @@ pub fn decompress_token_instruction_data(
     mint: &Pubkey,
     proof: &CompressedProof,
     compressed_token_accounts: Vec<InputTokenDataWithContext>,
+    cpi_context: Option<&CompressedCpiContext>,
 ) -> Vec<u8> {
     let amount = compressed_token_accounts
         .iter()
@@ -66,7 +72,7 @@ pub fn decompress_token_instruction_data(
         output_compressed_accounts: Vec::new(),
         is_compress: false,
         compress_or_decompress_amount: Some(amount),
-        cpi_context: None,
+        cpi_context: cpi_context.map(|c| c.clone()),
         lamports_change_account_merkle_tree_index: None,
     };
 
