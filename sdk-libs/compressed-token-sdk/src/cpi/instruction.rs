@@ -1,14 +1,18 @@
-use crate::state::{CompressedTokenInstructionDataTransfer, InputTokenDataWithContext};
 #[cfg(feature = "anchor")]
 use anchor_lang::AnchorSerialize;
 #[cfg(not(feature = "anchor"))]
 use borsh::BorshSerialize as AnchorSerialize;
 use light_compressed_account::instruction_data::compressed_proof::CompressedProof;
-use solana_program::instruction::{AccountMeta, Instruction};
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
+use solana_program::{
+    instruction::{AccountMeta, Instruction},
+    program_error::ProgramError,
+    pubkey::Pubkey,
+};
 
-use crate::cpi::accounts::CompressedTokenDecompressCpiAccounts;
+use crate::{
+    cpi::accounts::CompressedTokenDecompressCpiAccounts,
+    state::{CompressedTokenInstructionDataTransfer, InputTokenDataWithContext},
+};
 /// Return Instruction to decompress compressed token accounts.
 pub fn decompress_token_instruction(
     mint: &Pubkey,
