@@ -15,4 +15,6 @@ pub struct CompressedTokenDecompressCpiAccounts<'a> {
     pub decompress_destination: AccountInfo<'a>,
     pub token_program: AccountInfo<'a>,
     pub system_program: AccountInfo<'a>,
+    pub state_merkle_tree: AccountInfo<'a>,
+    pub queue: AccountInfo<'a>,
 }

@@ -36,6 +36,8 @@ pub fn decompress_token_instruction(
         AccountMeta::new(*light_cpi_accounts.decompress_destination.key, false),
         AccountMeta::new_readonly(*light_cpi_accounts.token_program.key, false),
         AccountMeta::new_readonly(*light_cpi_accounts.system_program.key, false),
+        AccountMeta::new(*light_cpi_accounts.state_merkle_tree.key, false),
+        AccountMeta::new(*light_cpi_accounts.queue.key, false),
     ];
 
     Ok(Instruction {
