@@ -73,7 +73,7 @@ pub fn decompress_token_instruction_data(
         output_compressed_accounts: Vec::new(),
         is_compress: false,
         compress_or_decompress_amount: Some(amount),
-        cpi_context: cpi_context.map(|c| c.clone()),
+        cpi_context: cpi_context.copied(),
         lamports_change_account_merkle_tree_index: None,
     };
 
