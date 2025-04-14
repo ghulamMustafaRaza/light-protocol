@@ -1,20 +1,19 @@
 use anchor_lang::prelude::*;
 use borsh::BorshDeserialize;
 use light_sdk::{
-    account::CBorshAccount,
-    cpi::verify::verify_compressed_account_infos,
+    account::LightAccount,
+    address::v1::derive_address,
+    cpi::{accounts::CompressionCpiAccounts, verify::verify_compressed_account_infos},
     error::LightSdkError,
     instruction::{account_meta::CompressedAccountMeta, instruction_data::LightInstructionData},
-    Discriminator, LightDiscriminator, LightHasher,
+    Discriminator, LightDiscriminator, LightHasher, NewAddressParamsPacked,
 };
 
 declare_id!("GRLu2hKaAiMbxpkAM1HeXzks9YeGuz18SEgXEizVvPqX");
 
 #[program]
 pub mod counter {
-    use light_sdk::{
-        address::v1::derive_address, cpi::accounts::CompressionCpiAccounts, NewAddressParamsPacked,
-    };
+    use super::*;
 
     pub fn create_counter<'info>(
         ctx: Context<'_, '_, '_, 'info, GenericAnchorAccounts<'info>>,
@@ -22,6 +21,11 @@ pub mod counter {
         output_merkle_tree_index: u8,
     ) -> Result<()> {
         let program_id = crate::ID.into();
+        // LightAccount::new_init will create an account with empty output state (no input state).
+        // Modifying the account will modify the output state that when converted to_account_info()
+        // is hashed with poseidon hashes, serialized with borsh
+        // and created with verify_compressed_account_infos by invoking the light-system-program.
+        // The hashing scheme is the account structure derived with LightHasher.
         let light_cpi_accounts = CompressionCpiAccounts::new(
             ctx.accounts.signer.as_ref(),
             ctx.remaining_accounts,
@@ -50,7 +54,7 @@ pub mod counter {
                 .address_merkle_tree_pubkey_index,
         };
 
-        let mut counter = CBorshAccount::<'_, CounterAccount>::new_init(
+        let mut counter = LightAccount::<'_, CounterAccount>::new_init(
             &program_id,
             Some(address),
             output_merkle_tree_index,
@@ -80,7 +84,13 @@ pub mod counter {
         account_meta: CompressedAccountMeta,
     ) -> Result<()> {
         let program_id = crate::ID.into();
-        let mut counter = CBorshAccount::<'_, CounterAccount>::new_mut(
+        // LightAccount::new_mut will create an account with input state and output state.
+        // The input state is hashed immediately when calling new_mut().
+        // Modifying the account will modify the output state that when converted to_account_info()
+        // is hashed with poseidon hashes, serialized with borsh
+        // and created with verify_compressed_account_infos by invoking the light-system-program.
+        // The hashing scheme is the account structure derived with LightHasher.
+        let mut counter = LightAccount::<'_, CounterAccount>::new_mut(
             &program_id,
             &account_meta,
             CounterAccount {
@@ -120,7 +130,7 @@ pub mod counter {
         account_meta: CompressedAccountMeta,
     ) -> Result<()> {
         let program_id = crate::ID.into();
-        let mut counter = CBorshAccount::<'_, CounterAccount>::new_mut(
+        let mut counter = LightAccount::<'_, CounterAccount>::new_mut(
             &program_id,
             &account_meta,
             CounterAccount {
@@ -164,7 +174,7 @@ pub mod counter {
         account_meta: CompressedAccountMeta,
     ) -> Result<()> {
         let program_id = crate::ID.into();
-        let mut counter = CBorshAccount::<'_, CounterAccount>::new_mut(
+        let mut counter = LightAccount::<'_, CounterAccount>::new_mut(
             &program_id,
             &account_meta,
             CounterAccount {
@@ -204,8 +214,10 @@ pub mod counter {
         account_meta: CompressedAccountMeta,
     ) -> Result<()> {
         let program_id = crate::ID.into();
-        // new_close will creates a  CBorshAccount without output state which will close the account.
-        let counter = CBorshAccount::<'_, CounterAccount>::new_close(
+        // LightAccount::new_close() will create an account with only input state and no output state.
+        // By providing no output state the account is closed after the instruction.
+        // The address of a closed account cannot be reused.
+        let counter = LightAccount::<'_, CounterAccount>::new_close(
             &program_id,
             &account_meta,
             CounterAccount {
