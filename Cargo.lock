@@ -3455,7 +3455,7 @@ dependencies = [
 
 [[package]]
 name = "light-hasher"
-version = "1.2.0"
+version = "2.0.0"
 dependencies = [
  "ark-bn254 0.5.0",
  "ark-ff 0.5.0",
@@ -3667,7 +3667,7 @@ dependencies = [
 
 [[package]]
 name = "light-sdk-macros"
-version = "0.4.0"
+version = "0.5.1"
 dependencies = [
  "ark-bn254 0.5.0",
  "borsh 0.10.4",
@@ -5301,6 +5301,22 @@ name = "sdd"
 version = "3.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "584e070911c7017da6cb2eb0788d09f43d789029b5877d3e5ecc8acf86ceee21"
+
+[[package]]
+name = "sdk-anchor-test"
+version = "0.7.0"
+dependencies = [
+ "anchor-lang",
+ "light-client",
+ "light-compressed-account",
+ "light-hasher",
+ "light-program-test",
+ "light-prover-client",
+ "light-sdk",
+ "light-test-utils",
+ "solana-sdk",
+ "tokio",
+]
 
 [[package]]
 name = "sdk-test"

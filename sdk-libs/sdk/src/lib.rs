@@ -15,9 +15,8 @@ pub mod utils;
 use anchor_lang::{AnchorDeserialize, AnchorSerialize};
 #[cfg(not(feature = "anchor"))]
 use borsh::{BorshDeserialize as AnchorDeserialize, BorshSerialize as AnchorSerialize};
-pub use light_account_checks::{discriminator::Discriminator, *};
-pub use light_compressed_account;
-pub use light_compressed_account::instruction_data::data::*;
+pub use light_account_checks::{discriminator::Discriminator as LightDiscriminator, *};
+pub use light_compressed_account::{self, instruction_data::data::*};
 pub use light_hasher::*;
 pub use light_macros::*;
 pub use light_sdk_macros::*;
