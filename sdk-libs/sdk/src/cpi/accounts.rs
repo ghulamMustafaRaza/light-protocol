@@ -1,4 +1,7 @@
-use crate::{error::Result, AccountInfo, AccountMeta, AnchorDeserialize, AnchorSerialize, Pubkey};
+use crate::{
+    error::{LightSdkError, Result},
+    AccountInfo, AccountMeta, AnchorDeserialize, AnchorSerialize, Pubkey,
+};
 
 #[derive(Debug, Default, Copy, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct CompressionCpiAccountsConfig {
@@ -58,18 +61,19 @@ impl<'c, 'info> CompressionCpiAccounts<'c, 'info> {
         accounts: &'c [AccountInfo<'info>],
         program_id: Pubkey,
     ) -> Result<Self> {
-        // if accounts.len() < SYSTEM_ACCOUNTS_LEN {
-        //     msg!("accounts len {}", accounts.len());
-        //     return Err(LightSdkError::FewerAccountsThanSystemAccounts);
-        // }
-        Ok(Self {
+        let new = Self {
             fee_payer,
             accounts,
             config: CompressionCpiAccountsConfig {
                 self_program: program_id,
                 ..Default::default()
             },
-        })
+        };
+        if accounts.len() < new.system_accounts_len() {
+            crate::msg!("accounts len {}", accounts.len());
+            return Err(LightSdkError::FewerAccountsThanSystemAccounts);
+        }
+        Ok(new)
     }
 
     pub fn new_with_config(
@@ -77,15 +81,16 @@ impl<'c, 'info> CompressionCpiAccounts<'c, 'info> {
         accounts: &'c [AccountInfo<'info>],
         config: CompressionCpiAccountsConfig,
     ) -> Result<Self> {
-        // if accounts.len() < SYSTEM_ACCOUNTS_LEN {
-        //     msg!("accounts len {}", accounts.len());
-        //     return Err(LightSdkError::FewerAccountsThanSystemAccounts);
-        // }
-        Ok(Self {
+        let new = Self {
             fee_payer,
             accounts,
             config,
-        })
+        };
+        if accounts.len() < new.system_accounts_len() {
+            crate::msg!("accounts len {}", accounts.len());
+            return Err(LightSdkError::FewerAccountsThanSystemAccounts);
+        }
+        Ok(new)
     }
 
     pub fn fee_payer(&self) -> &'c AccountInfo<'info> {
@@ -217,8 +222,9 @@ impl<'c, 'info> CompressionCpiAccounts<'c, 'info> {
                 is_signer: false,
                 is_writable: true,
             });
+            current_index += 1;
         }
-
+        assert_eq!(self.system_accounts_len(), current_index);
         self.accounts[self.system_accounts_len()..]
             .iter()
             .for_each(|acc| {

@@ -18,10 +18,17 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use pinocchio::{
     account_info::AccountInfo, msg, pubkey::Pubkey, sysvars::rent::Rent, sysvars::Sysvar,
 };
-// Solana program imports for non-pinocchio builds (default)
+// // Solana program imports for non-pinocchio builds (default)
+// #[cfg(not(feature = "pinocchio"))]
+// use solana_program::{
+//     account_info::AccountInfo, msg, pubkey::Pubkey, sysvar::rent::Rent, sysvar::Sysvar,
+// };
 #[cfg(not(feature = "pinocchio"))]
-use solana_program::{
-    account_info::AccountInfo, msg, pubkey::Pubkey, sysvar::rent::Rent, sysvar::Sysvar,
+pub(crate) use {
+    solana_account_info::AccountInfo,
+    solana_msg::msg,
+    solana_pubkey::Pubkey,
+    solana_sysvar::{rent::Rent, Sysvar},
 };
 
 #[allow(unused)]

@@ -61,7 +61,7 @@ solana-pubkey = { workspace = true, features = ["curve25519", "sha2"] }
 rand = { workspace = true }
 light-account-checks = { workspace = true, default-features = false, features = [
     "pinocchio",
-    "test_only",
+    "test-only",
 ] }
 
 [lints.rust.unexpected_cfgs]

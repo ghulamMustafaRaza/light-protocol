@@ -89,14 +89,14 @@ impl From<&[u8; 32]> for Pubkey {
 }
 
 #[cfg(not(feature = "anchor"))]
-impl From<Pubkey> for solana_program::pubkey::Pubkey {
+impl From<Pubkey> for solana_pubkey::Pubkey {
     fn from(pubkey: Pubkey) -> Self {
         Self::new_from_array(pubkey.to_bytes())
     }
 }
 
 #[cfg(not(feature = "anchor"))]
-impl From<&Pubkey> for solana_program::pubkey::Pubkey {
+impl From<&Pubkey> for solana_pubkey::Pubkey {
     fn from(pubkey: &Pubkey) -> Self {
         Self::new_from_array(pubkey.to_bytes())
     }
@@ -133,7 +133,7 @@ impl From<&crate::Pubkey> for Pubkey {
 impl Pubkey {
     #[cfg(not(feature = "pinocchio"))]
     pub fn new_unique() -> Self {
-        Self(solana_program::pubkey::Pubkey::new_unique().to_bytes())
+        Self(solana_pubkey::Pubkey::new_unique().to_bytes())
     }
 
     #[cfg(feature = "pinocchio")]

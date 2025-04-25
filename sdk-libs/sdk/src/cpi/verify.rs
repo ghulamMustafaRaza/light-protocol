@@ -1,7 +1,6 @@
 use light_compressed_account::{
     compressed_account::ReadOnlyCompressedAccount,
     instruction_data::{
-        compressed_proof::CompressedProof,
         cpi_context::CompressedCpiContext,
         data::{NewAddressParamsPacked, ReadOnlyAddress},
         invoke_cpi::InstructionDataInvokeCpi,
@@ -13,13 +12,13 @@ use crate::{
     account_info::AccountInfoTrait,
     cpi::accounts::CompressionCpiAccounts,
     error::{LightSdkError, Result},
-    find_cpi_signer_macro, invoke_signed, AccountInfo, AccountMeta, AnchorSerialize, Instruction,
-    Pubkey, CPI_AUTHORITY_PDA_SEED, PROGRAM_ID_LIGHT_SYSTEM,
+    find_cpi_signer_macro, invoke_signed, AccountInfo, AccountMeta, AddressProof, AnchorSerialize,
+    Instruction, Pubkey, ValidityProof, CPI_AUTHORITY_PDA_SEED, PROGRAM_ID_LIGHT_SYSTEM,
 };
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct CompressionInstruction {
-    pub proof: Option<CompressedProof>,
+    pub proof: ValidityProof,
     pub account_infos: Option<Vec<CompressedAccountInfo>>,
     pub read_only_accounts: Option<Vec<ReadOnlyCompressedAccount>>,
     pub new_addresses: Option<Vec<NewAddressParamsPacked>>,
@@ -30,20 +29,21 @@ pub struct CompressionInstruction {
 }
 
 impl CompressionInstruction {
-    pub fn new(proof: Option<CompressedProof>, account_infos: Vec<CompressedAccountInfo>) -> Self {
+    pub fn new(proof: ValidityProof, account_infos: Vec<CompressedAccountInfo>) -> Self {
         Self {
             proof,
             account_infos: Some(account_infos),
             ..Default::default()
         }
     }
+
     pub fn new_with_address(
-        proof: CompressedProof,
+        proof: AddressProof,
         account_infos: Vec<CompressedAccountInfo>,
         new_addresses: Vec<NewAddressParamsPacked>,
     ) -> Self {
         Self {
-            proof: Some(proof),
+            proof: proof.into(),
             account_infos: Some(account_infos),
             new_addresses: Some(new_addresses),
             ..Default::default()
@@ -86,7 +86,7 @@ pub fn verify_compressed_account_infos(
     }
 
     let instruction = InstructionDataInvokeCpi {
-        proof: instruction.proof,
+        proof: instruction.proof.into(),
         new_address_params: instruction.new_addresses.unwrap_or_default(),
         relay_fee: None,
         input_compressed_accounts_with_merkle_context,

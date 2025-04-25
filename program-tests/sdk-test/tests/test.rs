@@ -204,7 +204,7 @@ pub async fn update_pda(
                 .try_into()
                 .unwrap(),
         },
-        proof: rpc_result.proof,
+        proof: rpc_result.proof.into(),
         new_data: new_account_data,
         system_accounts_offset: system_accounts_offset as u8,
     };

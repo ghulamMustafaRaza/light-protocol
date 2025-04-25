@@ -11,7 +11,7 @@ use light_sdk::{
         account_meta::CompressedAccountMeta, merkle_context::PackedAddressMerkleContext,
     },
     verifier::CompressedProof,
-    LightDiscriminator, LightHasher, NewAddressParamsPacked,
+    LightDiscriminator, LightHasher, NewAddressParamsPacked, ValidityProof,
 };
 
 declare_id!("GRLu2hKaAiMbxpkAM1HeXzks9YeGuz18SEgXEizVvPqX");
@@ -79,7 +79,7 @@ pub mod counter {
 
     pub fn increment_counter<'info>(
         ctx: Context<'_, '_, '_, 'info, GenericAnchorAccounts<'info>>,
-        proof: Option<CompressedProof>,
+        proof: ValidityProof,
         counter_value: u64,
         account_meta: CompressedAccountMeta,
     ) -> Result<()> {
@@ -122,7 +122,7 @@ pub mod counter {
 
     pub fn decrement_counter<'info>(
         ctx: Context<'_, '_, '_, 'info, GenericAnchorAccounts<'info>>,
-        proof: Option<CompressedProof>,
+        proof: ValidityProof,
         counter_value: u64,
         account_meta: CompressedAccountMeta,
     ) -> Result<()> {
@@ -163,7 +163,7 @@ pub mod counter {
 
     pub fn reset_counter<'info>(
         ctx: Context<'_, '_, '_, 'info, GenericAnchorAccounts<'info>>,
-        proof: Option<CompressedProof>,
+        proof: ValidityProof,
         counter_value: u64,
         account_meta: CompressedAccountMeta,
     ) -> Result<()> {
@@ -199,7 +199,7 @@ pub mod counter {
 
     pub fn close_counter<'info>(
         ctx: Context<'_, '_, '_, 'info, GenericAnchorAccounts<'info>>,
-        proof: Option<CompressedProof>,
+        proof: ValidityProof,
         counter_value: u64,
         account_meta: CompressedAccountMeta,
     ) -> Result<()> {

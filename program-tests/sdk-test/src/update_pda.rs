@@ -7,7 +7,7 @@ use light_sdk::{
     },
     error::LightSdkError,
     instruction::account_meta::CompressedAccountMeta,
-    verifier::CompressedProof,
+    ValidityProof,
 };
 use solana_program::account_info::AccountInfo;
 
@@ -56,7 +56,7 @@ pub fn update_pda<const BATCHED: bool>(
 
 #[derive(Clone, Debug, Default, BorshDeserialize, BorshSerialize)]
 pub struct UpdatePdaInstructionData {
-    pub proof: Option<CompressedProof>,
+    pub proof: ValidityProof,
     pub my_compressed_account: UpdateMyCompressedAccount,
     pub new_data: [u8; 31],
     pub system_accounts_offset: u8,

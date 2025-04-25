@@ -10,7 +10,7 @@ use light_sdk::{
         account_meta::CompressedAccountMeta, merkle_context::PackedAddressMerkleContext,
     },
     verifier::CompressedProof,
-    LightDiscriminator, LightHasher, NewAddressParamsPacked,
+    LightDiscriminator, LightHasher, NewAddressParamsPacked, ValidityProof,
 };
 
 declare_id!("2tzfijPBGbrR5PboyFUFKzfEoLTwdDSHUjANCw929wyt");
@@ -75,7 +75,7 @@ pub mod sdk_anchor_test {
 
     pub fn update_nested_data<'info>(
         ctx: Context<'_, '_, '_, 'info, UpdateNestedData<'info>>,
-        proof: Option<CompressedProof>,
+        proof: ValidityProof,
         my_compressed_account: MyCompressedAccount,
         account_meta: CompressedAccountMeta,
         nested_data: NestedData,

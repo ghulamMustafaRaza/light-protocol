@@ -8,8 +8,7 @@ use light_sdk::{
     error::LightSdkError,
     hash_to_field_size::hashv_to_bn254_field_size_be_const_array,
     instruction::merkle_context::PackedAddressMerkleContext,
-    verifier::CompressedProof,
-    LightDiscriminator, LightHasher, NewAddressParamsPacked,
+    AddressProof, LightDiscriminator, LightHasher, NewAddressParamsPacked,
 };
 use solana_program::{account_info::AccountInfo, program_error::ProgramError};
 
@@ -97,7 +96,7 @@ pub struct MyCompressedAccount {
 
 #[derive(Clone, Debug, Default, BorshDeserialize, BorshSerialize)]
 pub struct CreatePdaInstructionData {
-    pub proof: CompressedProof,
+    pub proof: AddressProof,
     pub address_merkle_context: PackedAddressMerkleContext,
     pub output_merkle_tree_index: u8,
     pub data: [u8; 31],

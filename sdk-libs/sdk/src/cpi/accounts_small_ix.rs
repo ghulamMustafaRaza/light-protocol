@@ -148,6 +148,7 @@ impl<'c, 'info> CompressionCpiAccounts<'c, 'info> {
             });
             index += 1;
         }
+        assert_eq!(self.system_accounts_end_offset(), index);
 
         self.accounts[index..].iter().for_each(|acc| {
             account_metas.push(AccountMeta {
