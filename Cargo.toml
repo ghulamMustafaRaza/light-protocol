@@ -88,8 +88,8 @@ spl-token-2022 = { version = "7", no-default-features = true, features = [
 pinocchio = { version = "0.8.1" }
 
 # Anchor
-anchor-lang = { version = "=0.31.0", features = ["idl-build"] }
-anchor-spl = "=0.31.0"
+anchor-lang = { version = "0.31.1", features = ["idl-build"] }
+anchor-spl = "0.31.1"
 
 # Anchor compatibility
 borsh = "0.10.0"
@@ -160,7 +160,7 @@ light-batched-merkle-tree = { path = "program-libs/batched-merkle-tree", version
 light-merkle-tree-metadata = { path = "program-libs/merkle-tree-metadata", version = "0.1.0" }
 aligned-sized = { path = "program-libs/aligned-sized", version = "1.1.0" }
 light-bloom-filter = { path = "program-libs/bloom-filter", version = "0.1.0" }
-light-bounded-vec = { version = "1.1.0", git = "https://github.com/lightprotocol/program-libs", rev = "cf87f3e002d8a7dd40dd19d9387e73398cdcfef8" }
+light-bounded-vec = { version = "1.1.0", git = "https://github.com/lightprotocol/program-libs", rev = "f5aa99e4617672bab00073377a2db92e42610a73" }
 light-poseidon = { version = "0.3.0" }
 light-test-utils = { path = "program-tests/utils", version = "1.2.1" }
 light-indexed-array = { path = "program-libs/indexed-array", version = "0.1.0" }

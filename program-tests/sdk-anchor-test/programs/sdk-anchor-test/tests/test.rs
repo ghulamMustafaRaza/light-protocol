@@ -242,7 +242,7 @@ where
     )
     .unwrap();
     let instruction_data = sdk_anchor_test::instruction::UpdateNestedData {
-        proof: Some(rpc_result.proof),
+        proof: rpc_result.proof.into(),
         my_compressed_account,
         account_meta: CompressedAccountMeta {
             merkle_context: packed_merkle_context,

@@ -23,6 +23,7 @@ pinocchio = [
     "light-macros/pinocchio",
 ]
 bytemuck-des = ["bytemuck"]
+new-unique = ["dep:solana-pubkey"]
 
 [dependencies]
 thiserror = { workspace = true }
@@ -38,9 +39,9 @@ anchor-lang = { workspace = true, optional = true }
 pinocchio = { workspace = true, optional = true }
 bytemuck = { workspace = true, optional = true }
 borsh = { workspace = true }
-rand = { workspace = true }
 
 [dev-dependencies]
+rand = { workspace = true }
 light-poseidon = { workspace = true }
 borsh = { workspace = true }
 ark-ff = { workspace = true }

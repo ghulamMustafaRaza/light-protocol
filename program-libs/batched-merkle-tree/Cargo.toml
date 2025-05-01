@@ -61,6 +61,7 @@ light-merkle-tree-reference = { workspace = true }
 tokio = { workspace = true }
 serial_test = { workspace = true }
 light-account-checks = { workspace = true, features = ["test-only"] }
+light-compressed-account = { workspace = true, features = ["new-unique"] }
 
 [lints.rust.unexpected_cfgs]
 level = "allow"

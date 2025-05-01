@@ -136,14 +136,9 @@ impl Pubkey {
         Self(solana_pubkey::Pubkey::new_unique().to_bytes())
     }
 
-    #[cfg(feature = "pinocchio")]
+    #[cfg(all(feature = "pinocchio", feature = "new-unique"))]
     pub fn new_unique() -> Self {
-        // Just generate a random pubkey
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-        let mut bytes = [0u8; 32];
-        rng.fill(&mut bytes);
-        Self(bytes)
+        Self(solana_pubkey::Pubkey::new_unique().to_bytes())
     }
 
     pub fn to_bytes(&self) -> [u8; 32] {

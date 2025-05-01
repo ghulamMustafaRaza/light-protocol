@@ -18,6 +18,7 @@ default = ["debug", "readonly"]
 test-sbf = []
 debug = []
 readonly = []
+bpf-entrypoint = []
 
 [dependencies]
 light-concurrent-merkle-tree = { workspace = true, features = ["pinocchio"] }
@@ -59,6 +60,10 @@ solana-pubkey = { workspace = true, features = ["curve25519", "sha2"] }
 
 [dev-dependencies]
 rand = { workspace = true }
+light-compressed-account = { workspace = true, features = [
+    "pinocchio",
+    "new-unique",
+], default-features = false }
 light-account-checks = { workspace = true, default-features = false, features = [
     "pinocchio",
     "test-only",
