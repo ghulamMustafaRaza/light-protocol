@@ -85,14 +85,6 @@ impl RpcConnection for ProgramTestRpcConnection {
         unimplemented!()
     }
 
-    async fn get_block_time(&self, _slot: u64) -> Result<i64, RpcError> {
-        unimplemented!()
-    }
-
-    async fn get_epoch_info(&self) -> Result<EpochInfo, RpcError> {
-        unimplemented!()
-    }
-
     async fn get_program_accounts(
         &self,
         _program_id: &Pubkey,
