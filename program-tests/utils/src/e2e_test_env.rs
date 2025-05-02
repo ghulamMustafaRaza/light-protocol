@@ -86,12 +86,12 @@ use light_batched_merkle_tree::{
     queue::BatchedQueueAccount,
 };
 use light_client::{
+    fee::{FeeConfig, TransactionParams},
     indexer::{
         AddressMerkleTreeAccounts, AddressMerkleTreeBundle, Indexer, StateMerkleTreeAccounts,
         StateMerkleTreeBundle,
     },
     rpc::{errors::RpcError, merkle_tree::MerkleTreeExt, RpcConnection},
-    transaction_params::{FeeConfig, TransactionParams},
 };
 // TODO: implement traits for context object and indexer that we can implement with an rpc as well
 // context trait: send_transaction -> return transaction result, get_account_info -> return account info
@@ -128,7 +128,7 @@ use light_program_test::{
     indexer::{TestIndexer, TestIndexerExtensions},
     test_batch_forester::{perform_batch_append, perform_batch_nullify},
     test_env::{create_state_merkle_tree_and_queue_account, EnvAccounts},
-    test_rpc::ProgramTestRpcConnection,
+    test_rpc::{ProgramTestRpcConnection, TestRpcConnection},
 };
 use light_prover_client::{
     batch_address_append::get_batch_address_append_circuit_inputs,
@@ -252,7 +252,8 @@ impl Stats {
         println!("Finalized registrations {}", self.finalized_registrations);
     }
 }
-pub async fn init_program_test_env<R: RpcConnection + MerkleTreeExt>(
+
+pub async fn init_program_test_env<R: RpcConnection + MerkleTreeExt + TestRpcConnection>(
     rpc: R,
     env_accounts: &EnvAccounts,
     skip_prover: bool,
@@ -328,7 +329,10 @@ pub struct TestForester {
     is_registered: Option<u64>,
 }
 
-pub struct E2ETestEnv<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>> {
+pub struct E2ETestEnv<
+    R: RpcConnection + TestRpcConnection,
+    I: Indexer<R> + TestIndexerExtensions<R>,
+> {
     pub payer: Keypair,
     pub governance_keypair: Keypair,
     pub indexer: I,
@@ -351,7 +355,8 @@ pub struct E2ETestEnv<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>
     pub registration_epoch: u64,
 }
 
-impl<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>> E2ETestEnv<R, I>
+impl<R: RpcConnection + TestRpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>
+    E2ETestEnv<R, I>
 where
     R: RpcConnection,
     I: Indexer<R>,

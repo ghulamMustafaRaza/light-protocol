@@ -25,6 +25,7 @@ use light_client::indexer::Indexer;
 use light_compressed_account::TreeType;
 use light_hasher::Poseidon;
 use light_program_test::{
+    assert::assert_rpc_error,
     indexer::{TestIndexer, TestIndexerExtensions},
     test_batch_forester::{
         assert_perform_state_mt_roll_over, create_append_batch_ix_data,
@@ -42,7 +43,7 @@ use light_program_test::{
         EnvAccountKeypairs, GROUP_PDA_SEED_TEST_KEYPAIR, NOOP_PROGRAM_ID,
         OLD_REGISTRY_ID_TEST_KEYPAIR,
     },
-    test_rpc::ProgramTestRpcConnection,
+    test_rpc::{ProgramTestRpcConnection, TestRpcConnection},
 };
 use light_prover_client::gnark::helpers::{spawn_prover, ProofType, ProverConfig};
 use light_registry::{
@@ -70,7 +71,7 @@ use light_test_utils::{
         assert_epoch_pda, assert_finalized_epoch_registration, assert_registered_forester_pda,
         assert_report_work, fetch_epoch_and_forester_pdas,
     },
-    assert_rpc_error, create_address_merkle_tree_and_queue_account_with_assert,
+    create_address_merkle_tree_and_queue_account_with_assert,
     create_address_test_program_sdk::perform_create_pda_with_event_rnd,
     create_rollover_address_merkle_tree_instructions,
     create_rollover_state_merkle_tree_instructions,

@@ -1,9 +1,8 @@
 use std::io;
 
 use solana_banks_client::BanksClientError;
-use solana_client::client_error::ClientError;
-use solana_program::instruction::InstructionError;
-use solana_sdk::transaction::TransactionError;
+use solana_rpc_client_api::client_error::Error as ClientError;
+use solana_transaction_error::TransactionError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -31,40 +30,11 @@ pub enum RpcError {
     InvalidWarpSlot,
 }
 
-#[allow(clippy::result_large_err)]
-pub fn assert_rpc_error<T>(
-    result: Result<T, RpcError>,
-    i: u8,
-    expected_error_code: u32,
-) -> Result<(), RpcError> {
-    match result {
-        Err(RpcError::TransactionError(TransactionError::InstructionError(
-            index,
-            InstructionError::Custom(error_code),
-        ))) if index != i => Err(RpcError::AssertRpcError(
-            format!(
-                "Expected error code: {}, got: {} error: {}",
-                expected_error_code,
-                error_code,
-                unsafe { result.unwrap_err_unchecked() }
-            )
-            .to_string(),
-        )),
-        Err(RpcError::TransactionError(TransactionError::InstructionError(
-            index,
-            InstructionError::Custom(error_code),
-        ))) if index == i && error_code == expected_error_code => Ok(()),
+// Handle serialization errors from various sources
 
-        Err(RpcError::TransactionError(TransactionError::InstructionError(
-            0,
-            InstructionError::ProgramFailedToComplete,
-        ))) => Ok(()),
-        Err(e) => Err(RpcError::AssertRpcError(format!(
-            "Unexpected error type: {:?}",
-            e
-        ))),
-        _ => Err(RpcError::AssertRpcError(String::from(
-            "Unexpected error type",
-        ))),
+// Convert light_compressed_account errors
+impl From<light_compressed_account::indexer_event::error::ParseIndexerEventError> for RpcError {
+    fn from(e: light_compressed_account::indexer_event::error::ParseIndexerEventError) -> Self {
+        RpcError::CustomError(format!("ParseIndexerEventError: {}", e))
     }
 }

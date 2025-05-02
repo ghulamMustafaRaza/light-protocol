@@ -2,7 +2,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use light_compressed_account::instruction_data::compressed_proof::CompressedProof;
 use light_indexed_merkle_tree::array::IndexedElement;
 use num_bigint::BigUint;
-use solana_program::pubkey::Pubkey;
+use solana_pubkey::Pubkey;
 
 #[derive(Debug, Clone)]
 pub struct MerkleProof {
@@ -37,7 +37,7 @@ pub struct ProofRpcResult {
 }
 
 #[derive(Debug, Default)]
-pub struct BatchedTreeProofRpcResult {
+pub struct ProofRpcResultV2 {
     pub proof: Option<CompressedProof>,
     // If none -> proof by index  and not included in zkp, else included in zkp
     pub root_indices: Vec<Option<u16>>,

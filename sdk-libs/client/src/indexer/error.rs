@@ -10,7 +10,7 @@ pub enum IndexerError {
     RpcError(String),
 
     #[error("Failed to deserialize account data: {0}")]
-    DeserializeError(#[from] solana_sdk::program_error::ProgramError),
+    DeserializeError(#[from] solana_program_error::ProgramError),
 
     #[error("API error: {0}")]
     ApiError(String),

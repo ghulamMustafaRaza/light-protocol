@@ -10,6 +10,7 @@ use light_compressed_token::mint_sdk::create_mint_to_instruction;
 use light_hasher::Poseidon;
 use light_program_test::{
     acp_sdk::create_insert_leaves_instruction,
+    assert::assert_rpc_error,
     indexer::{TestIndexer, TestIndexerExtensions},
     test_env::{
         initialize_new_group, register_program_with_registry_program,
@@ -29,9 +30,9 @@ use light_registry::{
     },
 };
 use light_test_utils::{
-    airdrop_lamports, assert_custom_error_or_program_error, assert_rpc_error,
-    create_account_instruction, get_concurrent_merkle_tree, spl::create_mint_helper, FeeConfig,
-    RpcConnection, RpcError, TransactionParams,
+    airdrop_lamports, assert_custom_error_or_program_error, create_account_instruction,
+    get_concurrent_merkle_tree, spl::create_mint_helper, FeeConfig, RpcConnection, RpcError,
+    TransactionParams,
 };
 use serial_test::serial;
 use solana_sdk::{

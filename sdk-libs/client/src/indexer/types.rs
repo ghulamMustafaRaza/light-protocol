@@ -1,4 +1,4 @@
-use solana_program::pubkey::Pubkey;
+use solana_pubkey::Pubkey;
 
 pub struct ProofOfLeaf {
     pub leaf: [u8; 32],

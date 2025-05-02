@@ -5,6 +5,7 @@ mod state;
 
 use common::BatchProcessor;
 use error::Result;
+use forester_utils::rate_limiter::RateLimit;
 use light_client::rpc::RpcConnection;
 use tracing::{debug, instrument};
 
@@ -17,7 +18,10 @@ use tracing::{debug, instrument};
     ),
     skip(context)
 )]
-pub async fn process_batched_operations<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
+pub async fn process_batched_operations<
+    R: RpcConnection + RateLimit,
+    I: Indexer<R> + IndexerType<R>,
+>(
     context: BatchContext<R, I>,
     tree_type: TreeType,
 ) -> Result<usize> {

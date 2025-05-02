@@ -13,10 +13,13 @@ use light_prover_client::gnark::helpers::{
     spawn_validator, LightValidatorConfig, ProofType, ProverConfig,
 };
 use light_test_utils::{system_program::create_invoke_instruction, RpcConnection};
-use solana_sdk::{
-    native_token::LAMPORTS_PER_SOL, signature::Keypair, signer::Signer, system_instruction,
-    transaction::Transaction,
-};
+use solana_keypair::Keypair;
+use solana_signer::Signer;
+use solana_system_interface::instruction::create_account;
+use solana_transaction::Transaction;
+
+// Constants
+const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_all_endpoints() {
@@ -109,7 +112,7 @@ async fn test_all_endpoints() {
         .client
         .get_minimum_balance_for_rent_exemption(82)
         .unwrap();
-    let create_mint_ix = system_instruction::create_account(
+    let create_mint_ix = create_account(
         &payer_pubkey,
         &mint.pubkey(),
         mint_rent,

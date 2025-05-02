@@ -27,6 +27,7 @@ use light_compressed_account::{
 };
 use light_merkle_tree_metadata::errors::MerkleTreeMetadataError;
 use light_program_test::{
+    assert::assert_rpc_error,
     indexer::{TestIndexer, TestIndexerExtensions},
     test_batch_forester::perform_batch_append,
     test_env::{
@@ -44,7 +45,7 @@ use light_system_program::{
 use light_test_utils::{
     airdrop_lamports,
     assert_compressed_tx::assert_created_compressed_accounts,
-    assert_custom_error_or_program_error, assert_rpc_error,
+    assert_custom_error_or_program_error,
     system_program::{
         compress_sol_test, create_addresses_test, create_invoke_instruction,
         create_invoke_instruction_data_and_remaining_accounts, decompress_sol_test,

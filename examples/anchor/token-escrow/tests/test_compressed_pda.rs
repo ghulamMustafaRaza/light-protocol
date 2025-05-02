@@ -23,6 +23,7 @@ use light_hasher::{Hasher, Poseidon};
 use light_program_test::{
     indexer::{TestIndexer, TestIndexerExtensions},
     test_env::{setup_test_programs_with_accounts, EnvAccounts},
+    test_rpc::TestRpcConnection,
 };
 use light_prover_client::gnark::helpers::{ProverConfig, ProverMode};
 use light_test_utils::{

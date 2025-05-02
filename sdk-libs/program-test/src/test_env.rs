@@ -47,7 +47,7 @@ use crate::{
     },
     env_accounts,
     test_batch_forester::{create_batch_address_merkle_tree, create_batched_state_merkle_tree},
-    test_rpc::ProgramTestRpcConnection,
+    test_rpc::{ProgramTestRpcConnection, TestRpcConnection},
 };
 
 pub const CPI_CONTEXT_ACCOUNT_RENT: u64 = 143487360; // lamports of the cpi context account
@@ -827,7 +827,7 @@ pub async fn setup_accounts(keypairs: EnvAccountKeypairs, url: SolanaRpcUrl) -> 
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn initialize_accounts<R: RpcConnection>(
+pub async fn initialize_accounts<R: RpcConnection + TestRpcConnection>(
     context: &mut R,
     keypairs: EnvAccountKeypairs,
     protocol_config: ProtocolConfig,

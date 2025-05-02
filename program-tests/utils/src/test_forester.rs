@@ -15,7 +15,7 @@ use light_client::{
 use light_concurrent_merkle_tree::event::MerkleTreeEvent;
 use light_hasher::{bigint::bigint_to_be_bytes_array, Poseidon};
 use light_indexed_merkle_tree::copy::IndexedMerkleTreeCopy;
-use light_program_test::test_env::NOOP_PROGRAM_ID;
+use light_program_test::{test_env::NOOP_PROGRAM_ID, test_rpc::TestRpcConnection};
 use light_registry::{
     account_compression_cpi::sdk::{
         create_nullify_instruction, create_update_address_merkle_tree_instruction,
@@ -47,7 +47,7 @@ use thiserror::Error;
 /// 2. State tree root is updated
 /// 3. TODO: add event is emitted (after rebase)
 ///     optional: assert that the Merkle tree doesn't change except the updated leaf
-pub async fn nullify_compressed_accounts<R: RpcConnection>(
+pub async fn nullify_compressed_accounts<R: RpcConnection + TestRpcConnection>(
     rpc: &mut R,
     forester: &Keypair,
     state_tree_bundle: &mut StateMerkleTreeBundle,

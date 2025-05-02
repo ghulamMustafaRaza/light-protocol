@@ -8,7 +8,7 @@ use light_batched_merkle_tree::{
     initialize_address_tree::InitAddressTreeAccountsInstructionData,
     initialize_state_tree::InitStateTreeAccountsInstructionData,
 };
-use light_client::rpc::types::BatchedTreeProofRpcResult;
+use light_client::rpc::types::ProofRpcResultV2;
 use light_compressed_account::{
     address::{derive_address, derive_address_legacy},
     compressed_account::{MerkleContext, PackedMerkleContext, ReadOnlyCompressedAccount},
@@ -20,6 +20,7 @@ use light_compressed_account::{
     TreeType,
 };
 use light_program_test::{
+    assert::assert_rpc_error,
     indexer::{TestIndexer, TestIndexerExtensions},
     test_env::setup_test_programs_with_accounts_with_protocol_config_and_batched_tree_params,
     test_rpc::ProgramTestRpcConnection,
@@ -28,7 +29,7 @@ use light_prover_client::gnark::helpers::{spawn_prover, ProverConfig, ProverMode
 use light_registry::protocol_config::state::ProtocolConfig;
 use light_sdk::{NewAddressParamsAssigned, ReadOnlyAddress};
 use light_system_program::errors::SystemProgramError;
-use light_test_utils::{assert_rpc_error, RpcConnection};
+use light_test_utils::RpcConnection;
 use rand::{thread_rng, Rng};
 use serial_test::serial;
 use solana_sdk::pubkey::Pubkey;
@@ -214,7 +215,7 @@ async fn functional_read_only() {
                             })
                             .collect::<Vec<_>>();
                         let proof_res = if read_only_addresses.is_empty() && num_inputs == 0 {
-                            BatchedTreeProofRpcResult {
+                            ProofRpcResultV2 {
                                 proof: None,
                                 address_root_indices: vec![],
                                 root_indices: vec![],
@@ -507,7 +508,7 @@ async fn functional_account_infos() {
                             })
                             .collect::<Vec<_>>();
                         let proof_res = if read_only_addresses.is_empty() && num_inputs == 0 {
-                            BatchedTreeProofRpcResult {
+                            ProofRpcResultV2 {
                                 proof: None,
                                 address_root_indices: vec![],
                                 root_indices: vec![],

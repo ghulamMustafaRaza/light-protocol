@@ -21,6 +21,7 @@ use light_compressed_token::process_transfer::InputTokenDataWithContext;
 use light_hasher::{Hasher, Poseidon};
 use light_merkle_tree_metadata::errors::MerkleTreeMetadataError;
 use light_program_test::{
+    assert::assert_rpc_error,
     indexer::{TestIndexer, TestIndexerExtensions},
     test_batch_forester::{
         create_batch_update_address_tree_instruction_data_with_proof, perform_batch_append,
@@ -32,7 +33,6 @@ use light_registry::account_compression_cpi::sdk::create_batch_update_address_tr
 use light_sdk::token::{AccountState, TokenDataWithMerkleContext};
 use light_system_program::errors::SystemProgramError;
 use light_test_utils::{
-    assert_rpc_error,
     e2e_test_env::init_program_test_env,
     spl::{create_mint_helper, mint_tokens_helper},
     system_program::transfer_compressed_sol_test,

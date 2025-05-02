@@ -1,6 +1,7 @@
 use std::{fmt::Debug, str::FromStr, time::Duration};
 
 use async_trait::async_trait;
+use bs58;
 use light_compressed_account::compressed_account::{
     CompressedAccount, CompressedAccountData, CompressedAccountWithMerkleContext, MerkleContext,
 };
@@ -15,8 +16,7 @@ use photon_api::{
         GetCompressedTokenAccountsByOwnerV2PostRequest, TokenBalanceList,
     },
 };
-use solana_program::pubkey::Pubkey;
-use solana_sdk::bs58;
+use solana_pubkey::Pubkey;
 use tracing::{debug, error, warn};
 
 use super::{AddressQueueIndex, BatchAddressUpdateIndexerResponse, MerkleProofWithContext};
@@ -26,7 +26,6 @@ use crate::{
         FromPhotonTokenAccountList, Hash, Indexer, IndexerError, MerkleProof,
         NewAddressProofWithContext,
     },
-    rate_limiter::{RateLimiter, UseRateLimiter},
     rpc::{types::ProofRpcResult, RpcConnection},
 };
 
@@ -34,7 +33,6 @@ pub struct PhotonIndexer<R: RpcConnection> {
     configuration: Configuration,
     #[allow(dead_code)]
     rpc: R,
-    rate_limiter: Option<RateLimiter>,
 }
 
 impl<R: RpcConnection> PhotonIndexer<R> {
@@ -42,46 +40,9 @@ impl<R: RpcConnection> PhotonIndexer<R> {
         "http://127.0.0.1:8784".to_string()
     }
 }
-impl<R: RpcConnection> UseRateLimiter for PhotonIndexer<R> {
-    fn set_rate_limiter(&mut self, rate_limiter: RateLimiter) {
-        self.rate_limiter = Some(rate_limiter);
-    }
-
-    fn rate_limiter(&self) -> Option<&RateLimiter> {
-        self.rate_limiter.as_ref()
-    }
-}
 
 impl<R: RpcConnection> PhotonIndexer<R> {
-    pub fn new(path: String, api_key: Option<String>, rpc: R) -> Self {
-        let configuration = Configuration {
-            base_path: path,
-            api_key: api_key.map(|key| ApiKey {
-                prefix: Some("api-key".to_string()),
-                key,
-            }),
-            ..Default::default()
-        };
-
-        PhotonIndexer {
-            configuration,
-            rpc,
-            rate_limiter: None,
-        }
-    }
-
-    pub fn get_rpc(&self) -> &R {
-        &self.rpc
-    }
-
-    pub fn get_rpc_mut(&mut self) -> &mut R {
-        &mut self.rpc
-    }
-
-    async fn rate_limited_request_with_retry<F, Fut, T>(
-        &self,
-        mut operation: F,
-    ) -> Result<T, IndexerError>
+    async fn retry<F, Fut, T>(&self, mut operation: F) -> Result<T, IndexerError>
     where
         F: FnMut() -> Fut,
         Fut: std::future::Future<Output = Result<T, IndexerError>>,
@@ -94,22 +55,10 @@ impl<R: RpcConnection> PhotonIndexer<R> {
         loop {
             attempts += 1;
 
-            if let Some(limiter) = &self.rate_limiter {
-                debug!(
-                    "Attempt {}/{}: Acquiring rate limiter",
-                    attempts, max_retries
-                );
-                limiter.acquire_with_wait().await;
-                debug!(
-                    "Attempt {}/{}: Rate limiter acquired",
-                    attempts, max_retries
-                );
-            } else {
-                debug!(
-                    "Attempt {}/{}: No rate limiter configured",
-                    attempts, max_retries
-                );
-            }
+            debug!(
+                "Attempt {}/{}: No rate limiter configured",
+                attempts, max_retries
+            );
 
             debug!("Attempt {}/{}: Executing operation", attempts, max_retries);
             let result = operation().await;
@@ -159,6 +108,29 @@ impl<R: RpcConnection> PhotonIndexer<R> {
             }
         }
     }
+}
+
+impl<R: RpcConnection> PhotonIndexer<R> {
+    pub fn new(path: String, api_key: Option<String>, rpc: R) -> Self {
+        let configuration = Configuration {
+            base_path: path,
+            api_key: api_key.map(|key| ApiKey {
+                prefix: Some("api-key".to_string()),
+                key,
+            }),
+            ..Default::default()
+        };
+
+        PhotonIndexer { configuration, rpc }
+    }
+
+    pub fn get_rpc(&self) -> &R {
+        &self.rpc
+    }
+
+    pub fn get_rpc_mut(&mut self) -> &mut R {
+        &mut self.rpc
+    }
 
     fn extract_result<T>(context: &str, result: Option<T>) -> Result<T, IndexerError> {
         result.ok_or_else(|| IndexerError::missing_result(context, "value not present"))
@@ -201,7 +173,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         num_elements: u16,
         start_offset: Option<u64>,
     ) -> Result<Vec<MerkleProofWithContext>, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let request: photon_api::models::GetQueueElementsPostRequest =
                 photon_api::models::GetQueueElementsPostRequest {
                     params: Box::from(photon_api::models::GetQueueElementsPostRequestParams {
@@ -296,7 +268,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         &self,
         hashes: Vec<String>,
     ) -> Result<Vec<MerkleProof>, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let hashes_for_async = hashes.clone();
 
             let request: photon_api::models::GetMultipleCompressedAccountProofsPostRequest =
@@ -313,6 +285,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
                     request,
                 )
                 .await?;
+            debug!("Raw API response: {:?}", result);
 
             if let Some(error) = &result.error {
                 let error_msg = error.message.as_deref().unwrap_or("Unknown error");
@@ -324,17 +297,15 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
                 });
             }
 
-            let photon_proofs = result
-                .result
-                .ok_or_else(|| {
-                    IndexerError::missing_result(
-                        "get_multiple_new_address_proofs",
-                        "No result returned from Photon API",
-                    )
-                })?
-                .value;
+            let photon_proofs = result.result.ok_or_else(|| {
+                IndexerError::missing_result(
+                    "get_multiple_new_address_proofs",
+                    "No result returned from Photon API",
+                )
+            })?;
 
             photon_proofs
+                .value
                 .iter()
                 .map(|x| {
                     let mut proof_vec = x.proof.clone();
@@ -367,7 +338,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         &self,
         owner: &Pubkey,
     ) -> Result<Vec<CompressedAccountWithMerkleContext>, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let request = photon_api::models::GetCompressedAccountsByOwnerV2PostRequest {
                 params: Box::from(GetCompressedAccountsByOwnerPostRequestParams {
                     cursor: None,
@@ -433,7 +404,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         owner: &Pubkey,
         mint: Option<Pubkey>,
     ) -> Result<Vec<TokenDataWithMerkleContext>, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let request = GetCompressedTokenAccountsByOwnerV2PostRequest {
                 params: Box::from(GetCompressedTokenAccountsByOwnerPostRequestParams {
                     cursor: None,
@@ -520,7 +491,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         address: Option<Address>,
         hash: Option<Hash>,
     ) -> Result<Account, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let params = self.build_account_params(address, hash)?;
             let request = photon_api::models::GetCompressedAccountPostRequest {
                 params: Box::new(params),
@@ -546,14 +517,16 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         owner: &Pubkey,
         mint: Option<Pubkey>,
     ) -> Result<Vec<TokenDataWithMerkleContext>, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let request = photon_api::models::GetCompressedTokenAccountsByOwnerPostRequest {
-                params: Box::new(GetCompressedTokenAccountsByOwnerPostRequestParams {
-                    owner: owner.to_string(),
-                    mint: mint.map(|x| x.to_string()),
-                    cursor: None,
-                    limit: None,
-                }),
+                params: Box::new(
+                    photon_api::models::GetCompressedTokenAccountsByOwnerPostRequestParams {
+                        owner: owner.to_string(),
+                        mint: mint.map(|x| x.to_string()),
+                        cursor: None,
+                        limit: None,
+                    },
+                ),
                 ..Default::default()
             };
 
@@ -576,7 +549,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         address: Option<Address>,
         hash: Option<Hash>,
     ) -> Result<u64, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let params = self.build_account_params(address, hash)?;
             let request = photon_api::models::GetCompressedAccountBalancePostRequest {
                 params: Box::new(params),
@@ -600,7 +573,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         address: Option<Address>,
         hash: Option<Hash>,
     ) -> Result<u64, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let request = photon_api::models::GetCompressedTokenAccountBalancePostRequest {
                 params: Box::new(photon_api::models::GetCompressedAccountPostRequestParams {
                     address: address.map(|x| x.to_base58()),
@@ -627,16 +600,14 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         addresses: Option<Vec<Address>>,
         hashes: Option<Vec<Hash>>,
     ) -> Result<Vec<Account>, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
-            let addresses_for_async = addresses.clone();
-            let hashes_for_async = hashes.clone();
-
+        self.retry(|| async {
+            let hashes = hashes.clone();
+            let addresses = addresses.clone();
             let request = photon_api::models::GetMultipleCompressedAccountsPostRequest {
                 params: Box::new(
                     photon_api::models::GetMultipleCompressedAccountsPostRequestParams {
-                        addresses: addresses_for_async
-                            .map(|x| x.iter().map(|x| x.to_base58()).collect()),
-                        hashes: hashes_for_async.map(|x| x.iter().map(|x| x.to_base58()).collect()),
+                        addresses: addresses.map(|x| x.iter().map(|x| x.to_base58()).collect()),
+                        hashes: hashes.map(|x| x.iter().map(|x| x.to_base58()).collect()),
                     },
                 ),
                 ..Default::default()
@@ -659,14 +630,16 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         owner: &Pubkey,
         mint: Option<Pubkey>,
     ) -> Result<TokenBalanceList, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let request = photon_api::models::GetCompressedTokenBalancesByOwnerPostRequest {
-                params: Box::new(GetCompressedTokenAccountsByOwnerPostRequestParams {
-                    owner: owner.to_string(),
-                    mint: mint.map(|x| x.to_string()),
-                    cursor: None,
-                    limit: None,
-                }),
+                params: Box::new(
+                    photon_api::models::GetCompressedTokenAccountsByOwnerPostRequestParams {
+                        owner: owner.to_string(),
+                        mint: mint.map(|x| x.to_string()),
+                        cursor: None,
+                        limit: None,
+                    },
+                ),
                 ..Default::default()
             };
 
@@ -688,7 +661,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         &self,
         hash: Hash,
     ) -> Result<Vec<String>, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let request = photon_api::models::GetCompressionSignaturesForAccountPostRequest {
                 params: Box::new(
                     photon_api::models::GetCompressedAccountProofPostRequestParams {
@@ -722,7 +695,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         merkle_tree_pubkey: [u8; 32],
         addresses: Vec<[u8; 32]>,
     ) -> Result<Vec<NewAddressProofWithContext<16>>, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let params: Vec<photon_api::models::address_with_tree::AddressWithTree> = addresses
                 .iter()
                 .map(|x| photon_api::models::address_with_tree::AddressWithTree {
@@ -830,7 +803,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         hashes: Vec<Hash>,
         new_addresses_with_trees: Vec<AddressWithTree>,
     ) -> Result<CompressedProofWithContext, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let request = photon_api::models::GetValidityProofPostRequest {
                 params: Box::new(photon_api::models::GetValidityProofPostRequestParams {
                     hashes: Some(hashes.iter().map(|x| x.to_base58()).collect()),
@@ -859,12 +832,13 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         })
         .await
     }
+
     async fn get_validity_proof_v2(
         &self,
         hashes: Vec<Hash>,
         new_addresses_with_trees: Vec<AddressWithTree>,
     ) -> Result<CompressedProofWithContextV2, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let request = photon_api::models::GetValidityProofV2PostRequest {
                 params: Box::new(photon_api::models::GetValidityProofPostRequestParams {
                     hashes: Some(hashes.iter().map(|x| x.to_base58()).collect()),
@@ -894,16 +868,19 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
     }
 
     async fn get_indexer_slot(&self, _r: &mut R) -> Result<u64, IndexerError> {
-        let request = photon_api::models::GetIndexerSlotPostRequest {
-            ..Default::default()
-        };
+        self.retry(|| async {
+            let request = photon_api::models::GetIndexerSlotPostRequest {
+                ..Default::default()
+            };
 
-        let result =
-            photon_api::apis::default_api::get_indexer_slot_post(&self.configuration, request)
-                .await?;
+            let result =
+                photon_api::apis::default_api::get_indexer_slot_post(&self.configuration, request)
+                    .await?;
 
-        let result = Self::extract_result("get_indexer_slot", result.result)?;
-        Ok(result)
+            let result = Self::extract_result("get_indexer_slot", result.result)?;
+            Ok(result)
+        })
+        .await
     }
 
     fn get_address_merkle_trees(&self) -> &Vec<AddressMerkleTreeBundle> {
@@ -915,7 +892,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         merkle_tree_pubkey: &Pubkey,
         zkp_batch_size: u16,
     ) -> Result<BatchAddressUpdateIndexerResponse, IndexerError> {
-        self.rate_limited_request_with_retry(|| async {
+        self.retry(|| async {
             let merkle_tree = Hash::from_bytes(merkle_tree_pubkey.to_bytes().as_ref())?;
             let request = photon_api::models::GetBatchAddressUpdateInfoPostRequest {
                 params: Box::new(

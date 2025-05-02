@@ -17,6 +17,7 @@ use light_batched_merkle_tree::{
     queue::{BatchedQueueAccount, BatchedQueueMetadata},
 };
 use light_client::{
+    fee::FeeConfig,
     indexer::{
         Address, AddressMerkleTreeAccounts, AddressMerkleTreeBundle, AddressQueueIndex,
         AddressWithTree, BatchAddressUpdateIndexerResponse, Hash, Indexer, IndexerError,
@@ -25,10 +26,9 @@ use light_client::{
     },
     rpc::{
         merkle_tree::MerkleTreeExt,
-        types::{BatchedTreeProofRpcResult, ProofRpcResult},
+        types::{ProofRpcResult, ProofRpcResultV2},
         RpcConnection,
     },
-    transaction_params::FeeConfig,
 };
 use light_compressed_account::{
     compressed_account::{CompressedAccountWithMerkleContext, MerkleContext},
@@ -879,7 +879,7 @@ where
         new_addresses: Option<&[[u8; 32]]>,
         address_merkle_tree_pubkeys: Option<Vec<Pubkey>>,
         rpc: &mut R,
-    ) -> BatchedTreeProofRpcResult {
+    ) -> ProofRpcResultV2 {
         let mut indices_to_remove = Vec::new();
         // for all accounts in batched trees, check whether values are in tree or queue
         let (compressed_accounts, state_merkle_tree_pubkeys) =
@@ -970,7 +970,7 @@ where
             }
             root_indices
         };
-        BatchedTreeProofRpcResult {
+        ProofRpcResultV2 {
             proof: rpc_result.map(|x| x.unwrap().proof),
             root_indices,
             address_root_indices,

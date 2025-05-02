@@ -5,22 +5,21 @@ use borsh::BorshDeserialize;
 use light_compressed_account::indexer_event::event::{
     BatchPublicTransactionEvent, PublicTransactionEvent,
 };
-use solana_client::rpc_config::RpcSendTransactionConfig;
-use solana_program::{clock::Slot, instruction::Instruction};
-use solana_sdk::{
-    account::{Account, AccountSharedData},
-    commitment_config::CommitmentConfig,
-    epoch_info::EpochInfo,
-    hash::Hash,
-    pubkey::Pubkey,
-    signature::{Keypair, Signature},
-    transaction::{Transaction, TransactionError},
-};
+use solana_account::Account;
+use solana_clock::Slot;
+use solana_commitment_config::CommitmentConfig;
+use solana_epoch_info::EpochInfo;
+use solana_hash::Hash;
+use solana_instruction::Instruction;
+use solana_keypair::Keypair;
+use solana_pubkey::Pubkey;
+use solana_rpc_client_api::config::RpcSendTransactionConfig;
+use solana_signature::Signature;
+use solana_transaction::Transaction;
+use solana_transaction_error::TransactionError;
 use solana_transaction_status::TransactionStatus;
 
-use crate::{
-    rate_limiter::RateLimiter, rpc::errors::RpcError, transaction_params::TransactionParams,
-};
+use crate::rpc::errors::RpcError;
 
 #[async_trait]
 pub trait RpcConnection: Send + Sync + Debug + 'static {
@@ -31,28 +30,10 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
     fn should_retry(&self, error: &RpcError) -> bool {
         match error {
             RpcError::TransactionError(TransactionError::InstructionError(_, _)) => {
-                // Don't retry failing transactions.
+                // Don't retry failing transactions
                 false
             }
             _ => true,
-        }
-    }
-
-    fn set_rpc_rate_limiter(&mut self, rate_limiter: RateLimiter);
-    fn set_send_tx_rate_limiter(&mut self, rate_limiter: RateLimiter);
-
-    fn rpc_rate_limiter(&self) -> Option<&RateLimiter>;
-    fn send_tx_rate_limiter(&self) -> Option<&RateLimiter>;
-
-    async fn check_rpc_rate_limit(&self) {
-        if let Some(limiter) = self.rpc_rate_limiter() {
-            limiter.acquire_with_wait().await;
-        }
-    }
-
-    async fn check_send_tx_rrate_limit(&self) {
-        if let Some(limiter) = self.send_tx_rate_limiter() {
-            limiter.acquire_with_wait().await;
         }
     }
 
@@ -67,46 +48,9 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
         &self,
         program_id: &Pubkey,
     ) -> Result<Vec<(Pubkey, Account)>, RpcError>;
-    async fn process_transaction(
-        &mut self,
-        transaction: Transaction,
-    ) -> Result<Signature, RpcError>;
-    async fn process_transaction_with_context(
-        &mut self,
-        transaction: Transaction,
-    ) -> Result<(Signature, Slot), RpcError>;
-
-    async fn process_transaction_with_config(
-        &mut self,
-        transaction: Transaction,
-        config: RpcSendTransactionConfig,
-    ) -> Result<Signature, RpcError>;
-
-    async fn create_and_send_transaction_with_event<T>(
-        &mut self,
-        instructions: &[Instruction],
-        authority: &Pubkey,
-        signers: &[&Keypair],
-        transaction_params: Option<TransactionParams>,
-    ) -> Result<Option<(T, Signature, Slot)>, RpcError>
-    where
-        T: BorshDeserialize + Send + Debug;
-
-    async fn create_and_send_transaction<'a>(
-        &'a mut self,
-        instructions: &'a [Instruction],
-        payer: &'a Pubkey,
-        signers: &'a [&'a Keypair],
-    ) -> Result<Signature, RpcError> {
-        let blockhash = self.get_latest_blockhash().await?;
-        let transaction =
-            Transaction::new_signed_with_payer(instructions, Some(payer), signers, blockhash);
-        self.process_transaction(transaction).await
-    }
 
     async fn confirm_transaction(&self, signature: Signature) -> Result<bool, RpcError>;
     async fn get_account(&mut self, address: Pubkey) -> Result<Option<Account>, RpcError>;
-    fn set_account(&mut self, address: &Pubkey, account: &AccountSharedData);
     async fn get_minimum_balance_for_rent_exemption(
         &mut self,
         data_len: usize,
@@ -130,29 +74,77 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
     async fn get_balance(&mut self, pubkey: &Pubkey) -> Result<u64, RpcError>;
     async fn get_latest_blockhash(&mut self) -> Result<Hash, RpcError>;
     async fn get_slot(&mut self) -> Result<u64, RpcError>;
-    async fn warp_to_slot(&mut self, slot: Slot) -> Result<(), RpcError>;
+    async fn get_block_height(&mut self) -> Result<u64, RpcError>;
+    async fn get_transaction_slot(&mut self, signature: &Signature) -> Result<u64, RpcError>;
+
     async fn send_transaction(&self, transaction: &Transaction) -> Result<Signature, RpcError>;
+
+    async fn get_signature_statuses(
+        &self,
+        signatures: &[Signature],
+    ) -> Result<Vec<Option<TransactionStatus>>, RpcError>;
+
+    async fn process_transaction(
+        &mut self,
+        transaction: Transaction,
+    ) -> Result<Signature, RpcError>;
+
+    async fn process_transaction_with_context(
+        &mut self,
+        transaction: Transaction,
+    ) -> Result<(Signature, Slot), RpcError>;
+
+    #[cfg(not(feature = "devenv"))]
+    async fn create_and_send_transaction_with_event<T>(
+        &mut self,
+        instructions: &[Instruction],
+        authority: &Pubkey,
+        signers: &[&Keypair],
+    ) -> Result<Option<(T, Signature, Slot)>, RpcError>
+    where
+        T: BorshDeserialize + Send + Debug;
+
+    async fn create_and_send_transaction<'a>(
+        &'a mut self,
+        instructions: &'a [Instruction],
+        payer: &'a Pubkey,
+        signers: &'a [&'a Keypair],
+    ) -> Result<Signature, RpcError> {
+        let blockhash = self.get_latest_blockhash().await?;
+        let transaction =
+            Transaction::new_signed_with_payer(instructions, Some(payer), signers, blockhash);
+        self.process_transaction(transaction).await
+    }
+
+    async fn process_transaction_with_config(
+        &mut self,
+        transaction: Transaction,
+        config: RpcSendTransactionConfig,
+    ) -> Result<Signature, RpcError>;
+
     async fn send_transaction_with_config(
         &self,
         transaction: &Transaction,
         config: RpcSendTransactionConfig,
     ) -> Result<Signature, RpcError>;
-    async fn get_transaction_slot(&mut self, signature: &Signature) -> Result<u64, RpcError>;
-    async fn get_signature_statuses(
-        &self,
-        signatures: &[Signature],
-    ) -> Result<Vec<Option<TransactionStatus>>, RpcError>;
-    async fn get_block_height(&mut self) -> Result<u64, RpcError>;
 
+    #[cfg(not(feature = "devenv"))]
     async fn create_and_send_transaction_with_public_event(
         &mut self,
-        _instruction: &[Instruction],
-        _payer: &Pubkey,
-        _signers: &[&Keypair],
-        _transaction_params: Option<TransactionParams>,
-    ) -> Result<Option<(PublicTransactionEvent, Signature, Slot)>, RpcError> {
-        unimplemented!()
-    }
+        instruction: &[Instruction],
+        payer: &Pubkey,
+        signers: &[&Keypair],
+    ) -> Result<Option<(PublicTransactionEvent, Signature, Slot)>, RpcError>;
+
+    #[cfg(not(feature = "devenv"))]
+    async fn create_and_send_transaction_with_batched_event(
+        &mut self,
+        instruction: &[Instruction],
+        payer: &Pubkey,
+        signers: &[&Keypair],
+    ) -> Result<Option<(Vec<BatchPublicTransactionEvent>, Signature, Slot)>, RpcError>;
+
+    #[cfg(feature = "devenv")]
     async fn create_and_send_transaction_with_batched_event(
         &mut self,
         instruction: &[Instruction],
@@ -160,4 +152,27 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
         signers: &[&Keypair],
         transaction_params: Option<TransactionParams>,
     ) -> Result<Option<(Vec<BatchPublicTransactionEvent>, Signature, Slot)>, RpcError>;
+
+    #[cfg(feature = "devenv")]
+    async fn create_and_send_transaction_with_event<T>(
+        &mut self,
+        instruction: &[Instruction],
+        payer: &Pubkey,
+        signers: &[&Keypair],
+        transaction_params: Option<TransactionParams>,
+    ) -> Result<Option<(T, Signature, Slot)>, RpcError>
+    where
+        T: BorshDeserialize + Send + Debug;
+
+    #[cfg(feature = "devenv")]
+    async fn create_and_send_transaction_with_public_event(
+        &mut self,
+        instruction: &[Instruction],
+        payer: &Pubkey,
+        signers: &[&Keypair],
+        transaction_params: Option<TransactionParams>,
+    ) -> Result<Option<(PublicTransactionEvent, Signature, Slot)>, RpcError>;
 }
+
+#[cfg(feature = "devenv")]
+use crate::fee::TransactionParams;

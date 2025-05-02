@@ -9,12 +9,15 @@ use std::{
 
 use anyhow::Context;
 use dashmap::DashMap;
-use forester_utils::forester_epoch::{get_epoch_phases, Epoch, TreeAccounts, TreeForesterSchedule};
+use forester_utils::{
+    forester_epoch::{get_epoch_phases, Epoch, TreeAccounts, TreeForesterSchedule},
+    rate_limiter::RateLimit,
+    rpc_pool::SolanaRpcPool,
+};
 use futures::future::join_all;
 use light_client::{
     indexer::{Indexer, MerkleProof, NewAddressProofWithContext},
     rpc::{RetryConfig, RpcConnection, RpcError, SolanaRpcConnection},
-    rpc_pool::SolanaRpcPool,
 };
 use light_compressed_account::TreeType;
 use light_registry::{
@@ -82,7 +85,7 @@ pub enum MerkleProofType {
 }
 
 #[derive(Debug)]
-pub struct EpochManager<R: RpcConnection, I: Indexer<R>> {
+pub struct EpochManager<R: RpcConnection + RateLimit, I: Indexer<R>> {
     config: Arc<ForesterConfig>,
     protocol_config: Arc<ProtocolConfig>,
     rpc_pool: Arc<SolanaRpcPool<R>>,
@@ -95,7 +98,7 @@ pub struct EpochManager<R: RpcConnection, I: Indexer<R>> {
     new_tree_sender: broadcast::Sender<TreeAccounts>,
 }
 
-impl<R: RpcConnection, I: Indexer<R>> Clone for EpochManager<R, I> {
+impl<R: RpcConnection + RateLimit, I: Indexer<R>> Clone for EpochManager<R, I> {
     fn clone(&self) -> Self {
         Self {
             config: self.config.clone(),
@@ -112,7 +115,7 @@ impl<R: RpcConnection, I: Indexer<R>> Clone for EpochManager<R, I> {
     }
 }
 
-impl<R: RpcConnection, I: Indexer<R> + IndexerType<R>> EpochManager<R, I> {
+impl<R: RpcConnection + RateLimit, I: Indexer<R> + IndexerType<R>> EpochManager<R, I> {
     #[allow(clippy::too_many_arguments)]
     pub async fn new(
         config: Arc<ForesterConfig>,
@@ -1181,7 +1184,7 @@ impl<R: RpcConnection, I: Indexer<R> + IndexerType<R>> EpochManager<R, I> {
     skip(config, protocol_config, rpc_pool, indexer, shutdown, work_report_sender, slot_tracker),
     fields(forester = %config.payer_keypair.pubkey())
 )]
-pub async fn run_service<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
+pub async fn run_service<R: RpcConnection + RateLimit, I: Indexer<R> + IndexerType<R>>(
     config: Arc<ForesterConfig>,
     protocol_config: Arc<ProtocolConfig>,
     rpc_pool: Arc<SolanaRpcPool<R>>,
@@ -1235,7 +1238,7 @@ pub async fn run_service<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
                 .await
                 {
                     Ok(epoch_manager) => {
-                        let epoch_manager: Arc<EpochManager<R, I>> = Arc::new(epoch_manager);
+                        let epoch_manager = Arc::new(epoch_manager);
                         debug!(
                             "Successfully created EpochManager after {} attempts",
                             retry_count + 1

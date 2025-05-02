@@ -21,11 +21,11 @@ use photon_api::models::{
     Account, CompressedProofWithContext, CompressedProofWithContextV2, TokenAccount,
     TokenAccountList, TokenBalanceList,
 };
-use solana_sdk::pubkey::Pubkey;
+use solana_pubkey::Pubkey;
 
 use crate::{
+    fee::FeeConfig,
     rpc::{types::ProofRpcResult, RpcConnection},
-    transaction_params::FeeConfig,
 };
 
 pub mod photon_indexer;

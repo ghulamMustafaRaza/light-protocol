@@ -35,6 +35,7 @@ use light_compressed_token::{
     ErrorCode,
 };
 use light_program_test::{
+    assert::assert_rpc_error,
     indexer::{TestIndexer, TestIndexerExtensions},
     test_env::{
         setup_test_programs_with_accounts,
@@ -49,7 +50,7 @@ use light_prover_client::gnark::helpers::{
 use light_sdk::token::{AccountState, TokenDataWithMerkleContext};
 use light_system_program::errors::SystemProgramError;
 use light_test_utils::{
-    assert_custom_error_or_program_error, assert_rpc_error,
+    assert_custom_error_or_program_error,
     conversions::sdk_to_program_token_data,
     spl::{
         approve_test, burn_test, compress_test, compressed_transfer_22_test,

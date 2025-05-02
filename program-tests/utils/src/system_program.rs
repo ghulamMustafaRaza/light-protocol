@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use anchor_lang::{AnchorSerialize, InstructionData, ToAccountMetas};
 use light_client::{
+    fee::TransactionParams,
     indexer::Indexer,
     rpc::{errors::RpcError, RpcConnection},
-    transaction_params::TransactionParams,
 };
 use light_compressed_account::{
     address::derive_address_legacy,

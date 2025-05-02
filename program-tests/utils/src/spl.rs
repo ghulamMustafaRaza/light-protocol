@@ -1,9 +1,9 @@
 use anchor_spl::token::{Mint, TokenAccount};
 use forester_utils::instructions::create_account::create_account_instruction;
 use light_client::{
+    fee::TransactionParams,
     indexer::Indexer,
     rpc::{errors::RpcError, RpcConnection},
-    transaction_params::TransactionParams,
 };
 use light_compressed_account::{
     compressed_account::MerkleContext, instruction_data::compressed_proof::CompressedProof,

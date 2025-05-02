@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use forester_utils::forester_epoch::TreeAccounts;
-use light_client::{rpc::RpcConnection, rpc_pool::SolanaRpcPool};
+use forester_utils::{forester_epoch::TreeAccounts, rpc_pool::SolanaRpcPool};
+use light_client::rpc::RpcConnection;
 use tokio::{
     sync::broadcast,
     time::{interval, Duration},
@@ -10,14 +10,14 @@ use tracing::{error, trace};
 
 use crate::{tree_data_sync::fetch_trees, Result};
 
-pub struct TreeFinder<R: RpcConnection> {
+pub struct TreeFinder<R: RpcConnection + forester_utils::rate_limiter::RateLimit> {
     rpc_pool: Arc<SolanaRpcPool<R>>,
     known_trees: Vec<TreeAccounts>,
     new_tree_sender: broadcast::Sender<TreeAccounts>,
     check_interval: Duration,
 }
 
-impl<R: RpcConnection> TreeFinder<R> {
+impl<R: RpcConnection + forester_utils::rate_limiter::RateLimit> TreeFinder<R> {
     pub fn new(
         rpc_pool: Arc<SolanaRpcPool<R>>,
         initial_trees: Vec<TreeAccounts>,

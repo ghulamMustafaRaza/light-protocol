@@ -1,5 +1,8 @@
 use borsh::BorshSerialize;
-use forester_utils::instructions::address_batch_update::create_batch_update_address_tree_instruction_data;
+use forester_utils::{
+    instructions::address_batch_update::create_batch_update_address_tree_instruction_data,
+    rate_limiter::RateLimit,
+};
 use light_client::{indexer::Indexer, rpc::RpcConnection};
 use light_merkle_tree_metadata::events::MerkleTreeEvent;
 use light_registry::account_compression_cpi::sdk::create_batch_update_address_tree_instruction;
@@ -13,7 +16,7 @@ use crate::{
 };
 
 #[instrument(level = "debug", skip(context), fields(tree = %context.merkle_tree))]
-pub(crate) async fn process_batch<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
+pub(crate) async fn process_batch<R: RpcConnection + RateLimit, I: Indexer<R> + IndexerType<R>>(
     context: &BatchContext<R, I>,
 ) -> Result<usize> {
     info!("Processing address batch operation");

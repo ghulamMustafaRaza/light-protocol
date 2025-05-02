@@ -1,5 +1,7 @@
 pub mod acp_sdk;
+pub mod assert;
 pub mod env_accounts;
+#[cfg(feature = "devenv")]
 pub mod env_accounts_v1;
 pub mod indexer;
 pub mod test_batch_forester;

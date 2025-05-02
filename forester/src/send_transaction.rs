@@ -12,11 +12,12 @@ use account_compression::utils::constants::{
     STATE_MERKLE_TREE_CHANGELOG, STATE_NULLIFIER_QUEUE_VALUES,
 };
 use async_trait::async_trait;
-use forester_utils::forester_epoch::TreeAccounts;
+use forester_utils::{
+    forester_epoch::TreeAccounts, rate_limiter::RateLimit, rpc_pool::SolanaRpcPool,
+};
 use light_client::{
     indexer::Indexer,
     rpc::{RetryConfig, RpcConnection, RpcError},
-    rpc_pool::SolanaRpcPool,
 };
 use light_compressed_account::TreeType;
 use light_registry::{
@@ -98,7 +99,7 @@ pub fn calculate_compute_unit_price(target_lamports: u64, compute_units: u64) ->
 ///   end of slot
 /// - consider dynamic batch size based on the number of transactions in the
 ///   queue
-pub async fn send_batched_transactions<T: TransactionBuilder, R: RpcConnection>(
+pub async fn send_batched_transactions<T: TransactionBuilder, R: RpcConnection + RateLimit>(
     payer: &Keypair,
     derivation: &Pubkey,
     pool: Arc<SolanaRpcPool<R>>,
@@ -308,14 +309,16 @@ pub struct BuildTransactionBatchConfig {
     pub enable_priority_fees: bool,
 }
 
-pub struct EpochManagerTransactions<R: RpcConnection, I: Indexer<R>> {
+pub struct EpochManagerTransactions<R: RpcConnection + RateLimit, I: Indexer<R>> {
     pub indexer: Arc<Mutex<I>>,
     pub epoch: u64,
     pub phantom: std::marker::PhantomData<R>,
 }
 
 #[async_trait]
-impl<R: RpcConnection, I: Indexer<R>> TransactionBuilder for EpochManagerTransactions<R, I> {
+impl<R: RpcConnection + RateLimit, I: Indexer<R>> TransactionBuilder
+    for EpochManagerTransactions<R, I>
+{
     fn epoch(&self) -> u64 {
         self.epoch
     }
@@ -357,7 +360,7 @@ impl<R: RpcConnection, I: Indexer<R>> TransactionBuilder for EpochManagerTransac
 }
 
 /// Work items should be of only one type and tree
-pub async fn fetch_proofs_and_create_instructions<R: RpcConnection, I: Indexer<R>>(
+pub async fn fetch_proofs_and_create_instructions<R: RpcConnection + RateLimit, I: Indexer<R>>(
     authority: Pubkey,
     derivation: Pubkey,
     indexer: Arc<Mutex<I>>,

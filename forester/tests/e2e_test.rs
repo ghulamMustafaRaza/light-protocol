@@ -5,11 +5,10 @@ use account_compression::{
     AddressMerkleTreeAccount,
 };
 use forester::{queue_helpers::fetch_queue_item_data, run_pipeline, utils::get_protocol_config};
-use forester_utils::registry::register_test_forester;
+use forester_utils::{registry::register_test_forester, rpc_pool::SolanaRpcPool};
 use light_client::{
     indexer::{AddressMerkleTreeAccounts, StateMerkleTreeAccounts},
     rpc::{solana_rpc::SolanaRpcUrl, RpcConnection, RpcError, SolanaRpcConnection},
-    rpc_pool::SolanaRpcPool,
 };
 use light_program_test::{indexer::TestIndexer, test_env::EnvAccounts};
 use light_prover_client::gnark::helpers::{

@@ -43,10 +43,8 @@ pub use forester_utils::{
     },
 };
 pub use light_client::{
-    rpc::{
-        assert_rpc_error, solana_rpc::SolanaRpcUrl, RpcConnection, RpcError, SolanaRpcConnection,
-    },
-    transaction_params::{FeeConfig, TransactionParams},
+    fee::{FeeConfig, TransactionParams},
+    rpc::{solana_rpc::SolanaRpcUrl, RpcConnection, RpcError, SolanaRpcConnection},
 };
 use light_hasher::Poseidon;
 use light_program_test::{

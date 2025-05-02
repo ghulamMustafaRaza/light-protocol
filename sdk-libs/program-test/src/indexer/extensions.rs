@@ -5,7 +5,7 @@ use light_client::{
         AddressMerkleTreeAccounts, AddressMerkleTreeBundle, Indexer, MerkleProof,
         NewAddressProofWithContext, StateMerkleTreeAccounts, StateMerkleTreeBundle,
     },
-    rpc::{types::BatchedTreeProofRpcResult, RpcConnection},
+    rpc::{types::ProofRpcResultV2, RpcConnection},
 };
 use light_compressed_account::{
     compressed_account::CompressedAccountWithMerkleContext,
@@ -56,7 +56,7 @@ pub trait TestIndexerExtensions<R: RpcConnection>: Indexer<R> {
         new_addresses: Option<&[[u8; 32]]>,
         address_merkle_tree_pubkeys: Option<Vec<Pubkey>>,
         rpc: &mut R,
-    ) -> BatchedTreeProofRpcResult;
+    ) -> ProofRpcResultV2;
 
     fn add_address_merkle_tree_accounts(
         &mut self,

@@ -2,14 +2,12 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use bb8::{Pool, PooledConnection};
+use light_client::rpc::{RpcConnection, RpcError};
 use solana_sdk::commitment_config::CommitmentConfig;
 use thiserror::Error;
 use tokio::time::sleep;
 
-use crate::{
-    rate_limiter::RateLimiter,
-    rpc::{RpcConnection, RpcError},
-};
+use crate::rate_limiter::{RateLimit, RateLimiter};
 
 #[derive(Error, Debug)]
 pub enum PoolError {
@@ -21,7 +19,7 @@ pub enum PoolError {
     Pool(String),
 }
 
-pub struct SolanaConnectionManager<R: RpcConnection> {
+pub struct SolanaConnectionManager<R: RpcConnection + RateLimit> {
     url: String,
     commitment: CommitmentConfig,
     rpc_rate_limiter: Option<RateLimiter>,
@@ -29,7 +27,7 @@ pub struct SolanaConnectionManager<R: RpcConnection> {
     _phantom: std::marker::PhantomData<R>,
 }
 
-impl<R: RpcConnection> SolanaConnectionManager<R> {
+impl<R: RpcConnection + RateLimit> SolanaConnectionManager<R> {
     pub fn new(
         url: String,
         commitment: CommitmentConfig,
@@ -47,7 +45,7 @@ impl<R: RpcConnection> SolanaConnectionManager<R> {
 }
 
 #[async_trait]
-impl<R: RpcConnection> bb8::ManageConnection for SolanaConnectionManager<R> {
+impl<R: RpcConnection + RateLimit> bb8::ManageConnection for SolanaConnectionManager<R> {
     type Connection = R;
     type Error = PoolError;
 
@@ -72,11 +70,11 @@ impl<R: RpcConnection> bb8::ManageConnection for SolanaConnectionManager<R> {
 }
 
 #[derive(Debug)]
-pub struct SolanaRpcPool<R: RpcConnection> {
+pub struct SolanaRpcPool<R: RpcConnection + RateLimit> {
     pool: Pool<SolanaConnectionManager<R>>,
 }
 
-impl<R: RpcConnection> SolanaRpcPool<R> {
+impl<R: RpcConnection + RateLimit> SolanaRpcPool<R> {
     pub async fn new(
         url: String,
         commitment: CommitmentConfig,

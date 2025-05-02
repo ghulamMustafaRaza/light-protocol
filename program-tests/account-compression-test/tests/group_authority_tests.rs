@@ -10,11 +10,12 @@ use account_compression::{
 };
 use anchor_lang::{system_program, AnchorDeserialize, InstructionData, ToAccountMetas};
 use light_program_test::{
+    assert::assert_rpc_error,
     env_accounts_v1::get_registered_program_pda,
     test_env::{get_group_pda, OLD_SYSTEM_PROGRAM_ID_TEST_KEYPAIR},
     test_rpc::ProgramTestRpcConnection,
 };
-use light_test_utils::{airdrop_lamports, assert_rpc_error, RpcConnection};
+use light_test_utils::{airdrop_lamports, RpcConnection};
 use solana_program_test::ProgramTest;
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
