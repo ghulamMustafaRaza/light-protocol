@@ -11,9 +11,8 @@ use light_compressed_account::indexer_event::{
     parse::event_from_light_transaction,
 };
 use solana_account::Account;
-use solana_clock::{Slot, UnixTimestamp};
+use solana_clock::Slot;
 use solana_commitment_config::CommitmentConfig;
-use solana_epoch_info::EpochInfo;
 use solana_hash::Hash;
 use solana_instruction::Instruction;
 use solana_keypair::Keypair;
@@ -398,16 +397,6 @@ impl RpcConnection for SolanaRpcConnection {
             .await
     }
 
-    async fn get_block_time(&self, slot: u64) -> Result<UnixTimestamp, RpcError> {
-        self.retry(|| async { self.client.get_block_time(slot).map_err(RpcError::from) })
-            .await
-    }
-
-    async fn get_epoch_info(&self) -> Result<EpochInfo, RpcError> {
-        self.retry(|| async { self.client.get_epoch_info().map_err(RpcError::from) })
-            .await
-    }
-
     async fn get_program_accounts(
         &self,
         program_id: &Pubkey,
@@ -595,11 +584,6 @@ impl RpcConnection for SolanaRpcConnection {
             .get_signature_statuses(signatures)
             .map(|response| response.value)
             .map_err(RpcError::from)
-    }
-
-    async fn get_block_height(&mut self) -> Result<u64, RpcError> {
-        self.retry(|| async { self.client.get_block_height().map_err(RpcError::from) })
-            .await
     }
 
     #[cfg(not(feature = "devenv"))]

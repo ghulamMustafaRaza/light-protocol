@@ -145,14 +145,11 @@ pub async fn send_batched_transactions<T: TransactionBuilder, R: RpcConnection>(
         return Ok(0);
     }
 
-    let (recent_blockhash, current_block_height) = {
+    let (recent_blockhash, current_slot) = {
         let mut rpc = pool.get_connection().await?;
-        (
-            rpc.get_latest_blockhash().await?,
-            rpc.get_block_height().await?,
-        )
+        (rpc.get_latest_blockhash().await?, rpc.get_slot().await?)
     };
-    let last_valid_block_height = current_block_height + 150;
+    let last_valid_slot = current_slot + 150;
     let forester_epoch_pda_pubkey =
         get_forester_epoch_pda_from_authority(derivation, transaction_builder.epoch()).0;
     let priority_fee = if config.build_transaction_batch_config.enable_priority_fees {
@@ -228,7 +225,7 @@ pub async fn send_batched_transactions<T: TransactionBuilder, R: RpcConnection>(
                 payer,
                 derivation,
                 &recent_blockhash,
-                last_valid_block_height,
+                last_valid_slot,
                 priority_fee,
                 work_chunk,
                 config.build_transaction_batch_config,
@@ -268,8 +265,8 @@ pub async fn send_batched_transactions<T: TransactionBuilder, R: RpcConnection>(
                     return;
                 }
 
-                if let Ok(mut rpc) = pool_clone.get_connection().await {
-                    let result = rpc.process_transaction_with_config(tx, config).await;
+                if let Ok(rpc) = pool_clone.get_connection().await {
+                    let result = rpc.send_transaction_with_config(&tx, config).await;
                     if !cancel_signal_clone.load(Ordering::SeqCst) {
                         let _ = tx_sender.send(result).await;
                     }

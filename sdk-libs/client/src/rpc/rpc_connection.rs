@@ -8,7 +8,6 @@ use light_compressed_account::indexer_event::event::{
 use solana_account::Account;
 use solana_clock::Slot;
 use solana_commitment_config::CommitmentConfig;
-use solana_epoch_info::EpochInfo;
 use solana_hash::Hash;
 use solana_instruction::Instruction;
 use solana_keypair::Keypair;
@@ -41,8 +40,6 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
     fn get_url(&self) -> String;
 
     async fn health(&self) -> Result<(), RpcError>;
-    async fn get_block_time(&self, slot: u64) -> Result<i64, RpcError>;
-    async fn get_epoch_info(&self) -> Result<EpochInfo, RpcError>;
 
     async fn get_program_accounts(
         &self,
@@ -50,14 +47,12 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
     ) -> Result<Vec<(Pubkey, Account)>, RpcError>;
 
     async fn confirm_transaction(&self, signature: Signature) -> Result<bool, RpcError>;
-    async fn get_account(&mut self, address: Pubkey) -> Result<Option<Account>, RpcError>;
-    async fn get_minimum_balance_for_rent_exemption(
-        &mut self,
-        data_len: usize,
-    ) -> Result<u64, RpcError>;
-    async fn airdrop_lamports(&mut self, to: &Pubkey, lamports: u64)
-        -> Result<Signature, RpcError>;
 
+    /// Returns an account struct.
+    async fn get_account(&mut self, address: Pubkey) -> Result<Option<Account>, RpcError>;
+
+    /// Returns an a borsh deserialized account.
+    /// Deserialization skips the discriminator.
     async fn get_anchor_account<T: BorshDeserialize>(
         &mut self,
         pubkey: &Pubkey,
@@ -71,28 +66,47 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
         }
     }
 
+    async fn get_minimum_balance_for_rent_exemption(
+        &mut self,
+        data_len: usize,
+    ) -> Result<u64, RpcError>;
+    async fn airdrop_lamports(&mut self, to: &Pubkey, lamports: u64)
+        -> Result<Signature, RpcError>;
+
     async fn get_balance(&mut self, pubkey: &Pubkey) -> Result<u64, RpcError>;
     async fn get_latest_blockhash(&mut self) -> Result<Hash, RpcError>;
     async fn get_slot(&mut self) -> Result<u64, RpcError>;
-    async fn get_block_height(&mut self) -> Result<u64, RpcError>;
     async fn get_transaction_slot(&mut self, signature: &Signature) -> Result<u64, RpcError>;
-
-    async fn send_transaction(&self, transaction: &Transaction) -> Result<Signature, RpcError>;
-
     async fn get_signature_statuses(
         &self,
         signatures: &[Signature],
     ) -> Result<Vec<Option<TransactionStatus>>, RpcError>;
 
+    async fn send_transaction(&self, transaction: &Transaction) -> Result<Signature, RpcError>;
+
+    async fn send_transaction_with_config(
+        &self,
+        transaction: &Transaction,
+        config: RpcSendTransactionConfig,
+    ) -> Result<Signature, RpcError>;
+
+    #[cfg(feature = "devenv")]
     async fn process_transaction(
         &mut self,
         transaction: Transaction,
     ) -> Result<Signature, RpcError>;
 
+    #[cfg(feature = "devenv")]
     async fn process_transaction_with_context(
         &mut self,
         transaction: Transaction,
     ) -> Result<(Signature, Slot), RpcError>;
+
+    async fn process_transaction_with_config(
+        &mut self,
+        transaction: Transaction,
+        config: RpcSendTransactionConfig,
+    ) -> Result<Signature, RpcError>;
 
     #[cfg(not(feature = "devenv"))]
     async fn create_and_send_transaction_with_event<T>(
@@ -115,18 +129,6 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
             Transaction::new_signed_with_payer(instructions, Some(payer), signers, blockhash);
         self.process_transaction(transaction).await
     }
-
-    async fn process_transaction_with_config(
-        &mut self,
-        transaction: Transaction,
-        config: RpcSendTransactionConfig,
-    ) -> Result<Signature, RpcError>;
-
-    async fn send_transaction_with_config(
-        &self,
-        transaction: &Transaction,
-        config: RpcSendTransactionConfig,
-    ) -> Result<Signature, RpcError>;
 
     #[cfg(not(feature = "devenv"))]
     async fn create_and_send_transaction_with_public_event(
