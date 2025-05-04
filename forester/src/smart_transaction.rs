@@ -32,10 +32,7 @@ pub struct CreateSmartTransactionConfig {
 ///
 /// # Returns
 /// The confirmed transaction signature or an error if the confirmation times out
-pub async fn poll_transaction_confirmation<
-    'a,
-    R: RpcConnection + forester_utils::rate_limiter::RateLimit,
->(
+pub async fn poll_transaction_confirmation<'a, R: RpcConnection>(
     connection: &mut bb8::PooledConnection<'a, SolanaConnectionManager<R>>,
     txt_sig: Signature,
     abort_timeout: Duration,
@@ -83,10 +80,7 @@ pub async fn poll_transaction_confirmation<
 }
 
 // Sends a transaction and handles its confirmation. Retries until timeout or last_valid_block_height is reached.
-pub async fn send_and_confirm_transaction<
-    'a,
-    R: RpcConnection + forester_utils::rate_limiter::RateLimit,
->(
+pub async fn send_and_confirm_transaction<'a, R: RpcConnection>(
     connection: &mut bb8::PooledConnection<'a, SolanaConnectionManager<R>>,
     transaction: &Transaction,
     send_transaction_config: RpcSendTransactionConfig,

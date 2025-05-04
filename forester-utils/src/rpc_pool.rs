@@ -7,7 +7,7 @@ use solana_sdk::commitment_config::CommitmentConfig;
 use thiserror::Error;
 use tokio::time::sleep;
 
-use crate::rate_limiter::{RateLimit, RateLimiter};
+use crate::rate_limiter::RateLimiter;
 
 #[derive(Error, Debug)]
 pub enum PoolError {
@@ -19,15 +19,16 @@ pub enum PoolError {
     Pool(String),
 }
 
-pub struct SolanaConnectionManager<R: RpcConnection + RateLimit> {
+pub struct SolanaConnectionManager<R: RpcConnection> {
     url: String,
     commitment: CommitmentConfig,
-    rpc_rate_limiter: Option<RateLimiter>,
-    send_tx_rate_limiter: Option<RateLimiter>,
+    // TODO: implement RpcConnection for SolanaConnectionManager and rate limit requests.
+    _rpc_rate_limiter: Option<RateLimiter>,
+    _send_tx_rate_limiter: Option<RateLimiter>,
     _phantom: std::marker::PhantomData<R>,
 }
 
-impl<R: RpcConnection + RateLimit> SolanaConnectionManager<R> {
+impl<R: RpcConnection> SolanaConnectionManager<R> {
     pub fn new(
         url: String,
         commitment: CommitmentConfig,
@@ -37,27 +38,20 @@ impl<R: RpcConnection + RateLimit> SolanaConnectionManager<R> {
         Self {
             url,
             commitment,
-            rpc_rate_limiter,
-            send_tx_rate_limiter,
+            _rpc_rate_limiter: rpc_rate_limiter,
+            _send_tx_rate_limiter: send_tx_rate_limiter,
             _phantom: std::marker::PhantomData,
         }
     }
 }
 
 #[async_trait]
-impl<R: RpcConnection + RateLimit> bb8::ManageConnection for SolanaConnectionManager<R> {
+impl<R: RpcConnection> bb8::ManageConnection for SolanaConnectionManager<R> {
     type Connection = R;
     type Error = PoolError;
 
     async fn connect(&self) -> Result<Self::Connection, Self::Error> {
-        let mut conn = R::new(&self.url, Some(self.commitment));
-        if let Some(limiter) = &self.rpc_rate_limiter {
-            conn.set_rpc_rate_limiter(limiter.clone());
-        }
-        if let Some(limiter) = &self.send_tx_rate_limiter {
-            conn.set_send_tx_rate_limiter(limiter.clone());
-        }
-        Ok(conn)
+        Ok(R::new(&self.url, Some(self.commitment)))
     }
 
     async fn is_valid(&self, conn: &mut Self::Connection) -> Result<(), Self::Error> {
@@ -70,11 +64,11 @@ impl<R: RpcConnection + RateLimit> bb8::ManageConnection for SolanaConnectionMan
 }
 
 #[derive(Debug)]
-pub struct SolanaRpcPool<R: RpcConnection + RateLimit> {
+pub struct SolanaRpcPool<R: RpcConnection> {
     pool: Pool<SolanaConnectionManager<R>>,
 }
 
-impl<R: RpcConnection + RateLimit> SolanaRpcPool<R> {
+impl<R: RpcConnection> SolanaRpcPool<R> {
     pub async fn new(
         url: String,
         commitment: CommitmentConfig,

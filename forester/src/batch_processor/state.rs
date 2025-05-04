@@ -1,10 +1,7 @@
 use borsh::BorshSerialize;
-use forester_utils::{
-    instructions::{
-        state_batch_append::create_append_batch_ix_data,
-        state_batch_nullify::create_nullify_batch_ix_data,
-    },
-    rate_limiter::RateLimit,
+use forester_utils::instructions::{
+    state_batch_append::create_append_batch_ix_data,
+    state_batch_nullify::create_nullify_batch_ix_data,
 };
 use light_client::{indexer::Indexer, rpc::RpcConnection};
 use light_registry::account_compression_cpi::sdk::{
@@ -30,7 +27,7 @@ use crate::{
         output_queue = %context.output_queue,
     ), skip(context, rpc))
 ]
-pub(crate) async fn perform_append<R: RpcConnection + RateLimit, I: Indexer<R> + IndexerType<R>>(
+pub(crate) async fn perform_append<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
     context: &BatchContext<R, I>,
     rpc: &mut R,
 ) -> Result<()> {
@@ -139,10 +136,7 @@ pub(crate) async fn perform_append<R: RpcConnection + RateLimit, I: Indexer<R> +
     ),
     skip(context, rpc)
 )]
-pub(crate) async fn perform_nullify<
-    R: RpcConnection + RateLimit,
-    I: Indexer<R> + IndexerType<R>,
->(
+pub(crate) async fn perform_nullify<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
     context: &BatchContext<R, I>,
     rpc: &mut R,
 ) -> Result<()> {
@@ -233,7 +227,7 @@ pub(crate) async fn perform_nullify<
 }
 
 /// Get the current batch index from the Merkle tree account
-async fn get_batch_index<R: RpcConnection + RateLimit, I: Indexer<R>>(
+async fn get_batch_index<R: RpcConnection, I: Indexer<R>>(
     context: &BatchContext<R, I>,
     rpc: &mut R,
 ) -> Result<usize> {

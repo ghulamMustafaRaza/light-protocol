@@ -10,14 +10,14 @@ use tracing::{error, trace};
 
 use crate::{tree_data_sync::fetch_trees, Result};
 
-pub struct TreeFinder<R: RpcConnection + forester_utils::rate_limiter::RateLimit> {
+pub struct TreeFinder<R: RpcConnection> {
     rpc_pool: Arc<SolanaRpcPool<R>>,
     known_trees: Vec<TreeAccounts>,
     new_tree_sender: broadcast::Sender<TreeAccounts>,
     check_interval: Duration,
 }
 
-impl<R: RpcConnection + forester_utils::rate_limiter::RateLimit> TreeFinder<R> {
+impl<R: RpcConnection> TreeFinder<R> {
     pub fn new(
         rpc_pool: Arc<SolanaRpcPool<R>>,
         initial_trees: Vec<TreeAccounts>,

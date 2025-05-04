@@ -26,9 +26,7 @@ use std::{sync::Arc, time::Duration};
 use account_compression::utils::constants::{ADDRESS_QUEUE_VALUES, STATE_NULLIFIER_QUEUE_VALUES};
 pub use config::{ForesterConfig, ForesterEpochInfo};
 use forester_utils::{
-    forester_epoch::TreeAccounts,
-    rate_limiter::{RateLimit, RateLimiter},
-    rpc_pool::SolanaRpcPool,
+    forester_epoch::TreeAccounts, rate_limiter::RateLimiter, rpc_pool::SolanaRpcPool,
 };
 use light_client::{
     indexer::Indexer,
@@ -85,7 +83,7 @@ pub async fn run_queue_info(
     }
 }
 
-pub async fn run_pipeline<R: RpcConnection + RateLimit, I: Indexer<R> + IndexerType<R>>(
+pub async fn run_pipeline<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
     config: Arc<ForesterConfig>,
     rpc_rate_limiter: Option<RateLimiter>,
     send_tx_rate_limiter: Option<RateLimiter>,

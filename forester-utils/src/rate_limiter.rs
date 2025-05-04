@@ -1,52 +1,11 @@
 use std::{fmt::Debug, num::NonZeroU32, sync::Arc, time::Duration};
 
-use async_trait::async_trait;
 use governor::{
     clock::DefaultClock,
     state::{InMemoryState, NotKeyed},
     Quota, RateLimiter as Governor,
 };
-use light_client::rpc::SolanaRpcConnection;
 use thiserror::Error;
-
-#[async_trait]
-pub trait RateLimit: Send + Sync + Debug + 'static {
-    fn set_rpc_rate_limiter(&mut self, rate_limiter: RateLimiter);
-    fn set_send_tx_rate_limiter(&mut self, rate_limiter: RateLimiter);
-
-    fn rpc_rate_limiter(&self) -> Option<&RateLimiter>;
-    fn send_tx_rate_limiter(&self) -> Option<&RateLimiter>;
-
-    async fn check_rpc_rate_limit(&self) {
-        if let Some(limiter) = self.rpc_rate_limiter() {
-            limiter.acquire_with_wait().await;
-        }
-    }
-
-    async fn check_send_tx_rate_limit(&self) {
-        if let Some(limiter) = self.send_tx_rate_limiter() {
-            limiter.acquire_with_wait().await;
-        }
-    }
-}
-
-impl RateLimit for SolanaRpcConnection {
-    fn set_rpc_rate_limiter(&mut self, _rate_limiter: RateLimiter) {
-        unimplemented!()
-    }
-
-    fn set_send_tx_rate_limiter(&mut self, _rate_limiter: RateLimiter) {
-        unimplemented!()
-    }
-
-    fn rpc_rate_limiter(&self) -> Option<&RateLimiter> {
-        unimplemented!()
-    }
-
-    fn send_tx_rate_limiter(&self) -> Option<&RateLimiter> {
-        unimplemented!()
-    }
-}
 
 pub trait UseRateLimiter {
     fn set_rate_limiter(&mut self, rate_limiter: RateLimiter);
