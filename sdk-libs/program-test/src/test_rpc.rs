@@ -9,6 +9,7 @@ use light_compressed_account::indexer_event::{
     event::{BatchPublicTransactionEvent, PublicTransactionEvent},
     parse::event_from_light_transaction,
 };
+use light_prover_client::gnark::helpers::{ProverConfig, ProverMode};
 use solana_banks_client::BanksClientError;
 use solana_program_test::ProgramTestContext;
 use solana_rpc_client_api::config::RpcSendTransactionConfig;
@@ -25,8 +26,14 @@ use solana_sdk::{
 };
 use solana_transaction_status::TransactionStatus;
 
+use crate::{
+    accounts::env_accounts::EnvAccounts,
+    indexer::{TestIndexer, TestIndexerExtensions},
+};
+
 pub struct ProgramTestRpcConnection {
     pub context: ProgramTestContext,
+    pub indexer: Option<TestIndexer<ProgramTestRpcConnection>>,
 }
 
 pub trait TestRpcConnection {
@@ -49,7 +56,33 @@ impl TestRpcConnection for SolanaRpcConnection {
 
 impl ProgramTestRpcConnection {
     pub fn new(context: ProgramTestContext) -> Self {
-        Self { context }
+        Self {
+            context,
+            indexer: None,
+        }
+    }
+
+    pub async fn add_indexer(
+        &mut self,
+        env_accounts: &EnvAccounts,
+        with_prover: bool,
+    ) -> Result<(), RpcError> {
+        let prover_config = if with_prover {
+            Some(ProverConfig {
+                circuits: vec![],
+                run_mode: Some(ProverMode::Rpc),
+            })
+        } else {
+            None
+        };
+        let indexer = TestIndexer::<ProgramTestRpcConnection>::init_from_env(
+            &self.context.payer,
+            env_accounts,
+            prover_config,
+        )
+        .await;
+        self.indexer = Some(indexer);
+        Ok(())
     }
 
     async fn _create_and_send_transaction_with_event<T>(
@@ -116,14 +149,21 @@ impl ProgramTestRpcConnection {
         payer: &Pubkey,
         signers: &[&Keypair],
     ) -> Result<Option<(Vec<BatchPublicTransactionEvent>, Signature, Slot)>, RpcError> {
-        let mut vec = Vec::new();
-
         let transaction = Transaction::new_signed_with_payer(
             instruction,
             Some(payer),
             signers,
             self.context.get_new_latest_blockhash().await?,
         );
+
+        self._send_transaction_with_batched_event(transaction).await
+    }
+
+    async fn _send_transaction_with_batched_event(
+        &mut self,
+        transaction: Transaction,
+    ) -> Result<Option<(Vec<BatchPublicTransactionEvent>, Signature, Slot)>, RpcError> {
+        let mut vec = Vec::new();
 
         let signature = transaction.signatures[0];
         // Simulate the transaction. Currently, in banks-client/server, only
@@ -145,10 +185,15 @@ impl ProgramTestRpcConnection {
         let mut vec_accounts = Vec::<Vec<Pubkey>>::new();
         let mut program_ids = Vec::new();
 
-        instruction.iter().for_each(|i| {
-            program_ids.push(i.program_id);
+        transaction.message.instructions.iter().for_each(|i| {
+            program_ids.push(transaction.message.account_keys[i.program_id_index as usize]);
             vec.push(i.data.clone());
-            vec_accounts.push(i.accounts.iter().map(|x| x.pubkey).collect());
+            vec_accounts.push(
+                i.accounts
+                    .iter()
+                    .map(|x| transaction.message.account_keys[*x as usize])
+                    .collect(),
+            );
         });
         simulation_result
             .simulation_details
@@ -194,6 +239,15 @@ impl ProgramTestRpcConnection {
 
         let slot = self.context.banks_client.get_root_slot().await?;
         let event = event.map(|e| (e, signature, slot));
+
+        if let Some(indexer) = self.indexer.as_mut() {
+            if let Some(events) = event.as_ref() {
+                for event in events.0.iter() {
+                    indexer.add_compressed_accounts_with_token_data(slot, &event.event);
+                }
+            }
+        }
+
         Ok(event)
     }
 }
@@ -242,22 +296,6 @@ impl RpcConnection for ProgramTestRpcConnection {
         _program_id: &Pubkey,
     ) -> Result<Vec<(Pubkey, Account)>, RpcError> {
         unimplemented!("get_program_accounts")
-    }
-
-    #[cfg(feature = "devenv")]
-    async fn process_transaction(
-        &mut self,
-        transaction: Transaction,
-    ) -> Result<Signature, RpcError> {
-        let sig = *transaction.signatures.first().unwrap();
-        let result = self
-            .context
-            .banks_client
-            .process_transaction_with_metadata(transaction)
-            .await
-            .map_err(RpcError::from)?;
-        result.result.map_err(RpcError::TransactionError)?;
-        Ok(sig)
     }
 
     async fn process_transaction_with_context(
@@ -353,7 +391,9 @@ impl RpcConnection for ProgramTestRpcConnection {
     }
 
     async fn send_transaction(&self, _transaction: &Transaction) -> Result<Signature, RpcError> {
-        unimplemented!("send transaction is unimplemented for ProgramTestRpcConnection")
+        Err(RpcError::CustomError(
+            "send_transaction is unimplemented for ProgramTestConnection".to_string(),
+        ))
     }
 
     async fn send_transaction_with_config(
@@ -361,7 +401,9 @@ impl RpcConnection for ProgramTestRpcConnection {
         _transaction: &Transaction,
         _config: RpcSendTransactionConfig,
     ) -> Result<Signature, RpcError> {
-        unimplemented!("send transaction with config is unimplemented for ProgramTestRpcConnection")
+        Err(RpcError::CustomError(
+            "send_transaction_with_config is unimplemented for ProgramTestConnection".to_string(),
+        ))
     }
 
     async fn get_transaction_slot(&mut self, signature: &Signature) -> Result<u64, RpcError> {
@@ -378,6 +420,7 @@ impl RpcConnection for ProgramTestRpcConnection {
                     .map(|status| status.slot)
             })
     }
+
     async fn get_signature_statuses(
         &self,
         _signatures: &[Signature],
@@ -494,7 +537,27 @@ impl RpcConnection for ProgramTestRpcConnection {
             )
             .await?;
         let event = res.map(|e| (e.0[0].event.clone(), e.1, e.2));
+
         Ok(event)
+    }
+
+    async fn process_transaction(
+        &mut self,
+        transaction: Transaction,
+    ) -> Result<Signature, RpcError> {
+        let sig = *transaction.signatures.first().unwrap();
+        if self.indexer.is_some() {
+            self._send_transaction_with_batched_event(transaction)
+                .await?;
+        } else {
+            self.context
+                .banks_client
+                .process_transaction(transaction)
+                .await
+                .map_err(RpcError::from)?;
+        }
+
+        Ok(sig)
     }
 }
 

@@ -27,13 +27,14 @@ use light_compressed_account::{
 };
 use light_merkle_tree_metadata::errors::MerkleTreeMetadataError;
 use light_program_test::{
+    accounts::{
+        env_accounts::EnvAccounts, env_keypairs::EnvAccountKeypairs,
+        initialize::initialize_accounts,
+    },
     assert::assert_rpc_error,
     indexer::{TestIndexer, TestIndexerExtensions},
     test_batch_forester::perform_batch_append,
-    test_env::{
-        initialize_accounts, setup_test_programs, setup_test_programs_with_accounts,
-        EnvAccountKeypairs, EnvAccounts,
-    },
+    test_env::{setup_test_programs, setup_test_programs_with_accounts},
     test_rpc::ProgramTestRpcConnection,
 };
 use light_prover_client::gnark::helpers::{spawn_prover, ProofType, ProverConfig, ProverMode};

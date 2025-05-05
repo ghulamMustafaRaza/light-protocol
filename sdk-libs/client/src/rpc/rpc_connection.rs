@@ -90,7 +90,6 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
         config: RpcSendTransactionConfig,
     ) -> Result<Signature, RpcError>;
 
-    #[cfg(feature = "devenv")]
     async fn process_transaction(
         &mut self,
         transaction: Transaction,

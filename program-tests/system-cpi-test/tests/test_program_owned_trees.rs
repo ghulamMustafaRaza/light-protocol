@@ -9,13 +9,14 @@ use anchor_lang::{system_program, InstructionData, ToAccountMetas};
 use light_compressed_token::mint_sdk::create_mint_to_instruction;
 use light_hasher::Poseidon;
 use light_program_test::{
-    acp_sdk::create_insert_leaves_instruction,
+    accounts::{
+        env_accounts::NOOP_PROGRAM_ID, initialize::initialize_new_group,
+        register_program::register_program_with_registry_program,
+        state_merkle_tree::create_insert_leaves_instruction,
+    },
     assert::assert_rpc_error,
     indexer::{TestIndexer, TestIndexerExtensions},
-    test_env::{
-        initialize_new_group, register_program_with_registry_program,
-        setup_test_programs_with_accounts, NOOP_PROGRAM_ID,
-    },
+    test_env::setup_test_programs_with_accounts,
     test_rpc::ProgramTestRpcConnection,
 };
 use light_prover_client::gnark::helpers::{ProverConfig, ProverMode};

@@ -10,7 +10,9 @@ use light_batched_merkle_tree::{
     initialize_state_tree::InitStateTreeAccountsInstructionData,
 };
 use light_client::rpc::{RpcConnection, SolanaRpcConnection};
-use light_program_test::test_env::{initialize_accounts, EnvAccountKeypairs};
+use light_program_test::accounts::{
+    env_keypairs::EnvAccountKeypairs, initialize::initialize_accounts,
+};
 use solana_sdk::{
     native_token::LAMPORTS_PER_SOL,
     signature::{read_keypair_file, write_keypair_file, Keypair, Signer},

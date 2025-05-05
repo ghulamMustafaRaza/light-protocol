@@ -409,7 +409,6 @@ impl RpcConnection for SolanaRpcConnection {
         .await
     }
 
-    #[cfg(feature = "devenv")]
     async fn process_transaction(
         &mut self,
         transaction: Transaction,

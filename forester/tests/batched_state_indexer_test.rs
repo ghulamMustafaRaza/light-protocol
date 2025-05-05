@@ -13,7 +13,7 @@ use light_client::{
     indexer::{photon_indexer::PhotonIndexer, Indexer},
     rpc::{solana_rpc::SolanaRpcUrl, RpcConnection, SolanaRpcConnection},
 };
-use light_program_test::{indexer::TestIndexer, test_env::EnvAccounts};
+use light_program_test::{accounts::env_accounts::EnvAccounts, indexer::TestIndexer};
 use light_prover_client::gnark::helpers::LightValidatorConfig;
 use light_test_utils::e2e_test_env::{init_program_test_env, E2ETestEnv};
 use serial_test::serial;

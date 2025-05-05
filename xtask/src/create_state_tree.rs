@@ -4,7 +4,7 @@ use account_compression::{NullifierQueueConfig, StateMerkleTreeConfig};
 use clap::Parser;
 use dirs::home_dir;
 use light_client::rpc::{RpcConnection, SolanaRpcConnection};
-use light_program_test::test_env::create_state_merkle_tree_and_queue_account;
+use light_program_test::accounts::state_merkle_tree::create_state_merkle_tree_and_queue_account;
 use solana_sdk::signature::{read_keypair_file, write_keypair_file, Keypair, Signer};
 
 #[derive(Debug, Parser)]

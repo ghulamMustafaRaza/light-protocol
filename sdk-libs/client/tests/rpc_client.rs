@@ -8,7 +8,7 @@ use light_compressed_account::{
 use light_compressed_token::mint_sdk::{
     create_create_token_pool_instruction, create_mint_to_instruction,
 };
-use light_program_test::test_env::EnvAccounts;
+use light_program_test::accounts::env_accounts::EnvAccounts;
 use light_prover_client::gnark::helpers::{
     spawn_validator, LightValidatorConfig, ProofType, ProverConfig,
 };

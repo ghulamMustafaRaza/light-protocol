@@ -11,7 +11,7 @@ use light_compressed_account::{
     instruction_data::{compressed_proof::CompressedProof, data::NewAddressParams},
 };
 use light_compressed_token::process_transfer::transfer_sdk::to_account_metas;
-use light_program_test::{indexer::TestIndexerExtensions, test_env::EnvAccounts};
+use light_program_test::{accounts::env_accounts::EnvAccounts, indexer::TestIndexerExtensions};
 use solana_sdk::{instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer};
 
 #[derive(Debug, Clone)]

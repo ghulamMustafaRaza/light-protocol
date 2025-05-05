@@ -20,7 +20,8 @@ use light_hasher::{bigint::bigint_to_be_bytes_array, Poseidon};
 use light_indexed_merkle_tree::errors::IndexedMerkleTreeError;
 use light_merkle_tree_metadata::errors::MerkleTreeMetadataError;
 use light_program_test::{
-    assert::assert_rpc_error, test_env::NOOP_PROGRAM_ID, test_rpc::ProgramTestRpcConnection,
+    accounts::env_accounts::NOOP_PROGRAM_ID, assert::assert_rpc_error,
+    test_rpc::ProgramTestRpcConnection,
 };
 use light_test_utils::{
     address::insert_addresses,

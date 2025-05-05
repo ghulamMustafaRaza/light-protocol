@@ -13,9 +13,10 @@
 use light_client::indexer::Indexer;
 use light_compressed_account::{compressed_account::MerkleContext, TreeType};
 use light_program_test::{
+    accounts::env_accounts::EnvAccounts,
     assert::assert_rpc_error,
     indexer::{TestIndexer, TestIndexerExtensions},
-    test_env::{setup_test_programs_with_accounts, EnvAccounts},
+    test_env::setup_test_programs_with_accounts,
     test_rpc::TestRpcConnection,
 };
 use light_prover_client::gnark::helpers::{ProofType, ProverConfig};

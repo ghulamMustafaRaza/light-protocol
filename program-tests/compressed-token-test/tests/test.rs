@@ -35,12 +35,12 @@ use light_compressed_token::{
     ErrorCode,
 };
 use light_program_test::{
+    accounts::{env_accounts::EnvAccounts, env_keypairs::EnvAccountKeypairs},
     assert::assert_rpc_error,
     indexer::{TestIndexer, TestIndexerExtensions},
     test_env::{
         setup_test_programs_with_accounts,
         setup_test_programs_with_accounts_with_protocol_config_and_batched_tree_params,
-        EnvAccountKeypairs, EnvAccounts,
     },
     test_rpc::ProgramTestRpcConnection,
 };

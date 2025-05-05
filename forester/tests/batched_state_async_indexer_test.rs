@@ -18,7 +18,7 @@ use light_compressed_account::{
 use light_compressed_token::process_transfer::{
     transfer_sdk::create_transfer_instruction, TokenTransferOutputData,
 };
-use light_program_test::test_env::EnvAccounts;
+use light_program_test::accounts::env_accounts::EnvAccounts;
 use light_prover_client::gnark::helpers::{LightValidatorConfig, ProverConfig, ProverMode};
 use light_registry::{
     protocol_config::state::{ProtocolConfig, ProtocolConfigPda},

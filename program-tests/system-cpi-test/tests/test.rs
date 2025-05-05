@@ -21,12 +21,13 @@ use light_compressed_token::process_transfer::InputTokenDataWithContext;
 use light_hasher::{Hasher, Poseidon};
 use light_merkle_tree_metadata::errors::MerkleTreeMetadataError;
 use light_program_test::{
+    accounts::env_accounts::EnvAccounts,
     assert::assert_rpc_error,
     indexer::{TestIndexer, TestIndexerExtensions},
     test_batch_forester::{
         create_batch_update_address_tree_instruction_data_with_proof, perform_batch_append,
     },
-    test_env::{setup_test_programs_with_accounts, EnvAccounts},
+    test_env::setup_test_programs_with_accounts,
 };
 use light_prover_client::gnark::helpers::{ProverConfig, ProverMode};
 use light_registry::account_compression_cpi::sdk::create_batch_update_address_tree_instruction;

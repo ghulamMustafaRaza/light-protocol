@@ -125,9 +125,11 @@ use light_indexed_merkle_tree::{
 use light_merkle_tree_metadata::QueueType;
 use light_merkle_tree_reference::sparse_merkle_tree::SparseMerkleTree;
 use light_program_test::{
+    accounts::{
+        env_accounts::EnvAccounts, state_merkle_tree::create_state_merkle_tree_and_queue_account,
+    },
     indexer::{TestIndexer, TestIndexerExtensions},
     test_batch_forester::{perform_batch_append, perform_batch_nullify},
-    test_env::{create_state_merkle_tree_and_queue_account, EnvAccounts},
     test_rpc::{ProgramTestRpcConnection, TestRpcConnection},
 };
 use light_prover_client::{

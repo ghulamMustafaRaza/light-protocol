@@ -11,8 +11,6 @@ use forester_utils::account_zero_copy::{
 };
 use light_batched_merkle_tree::{
     constants::{DEFAULT_BATCH_ADDRESS_TREE_HEIGHT, DEFAULT_BATCH_STATE_TREE_HEIGHT},
-    initialize_address_tree::InitAddressTreeAccountsInstructionData,
-    initialize_state_tree::InitStateTreeAccountsInstructionData,
     merkle_tree::BatchedMerkleTreeAccount,
     queue::{BatchedQueueAccount, BatchedQueueMetadata},
 };
@@ -71,13 +69,17 @@ use solana_sdk::{
     signature::{Keypair, Signer},
 };
 
+#[cfg(feature = "devenv")]
+use crate::test_batch_forester::{
+    create_batch_address_merkle_tree, create_batched_state_merkle_tree,
+};
 use crate::{
+    accounts::{
+        env_accounts::EnvAccounts, env_keypairs::BATCHED_OUTPUT_QUEUE_TEST_KEYPAIR,
+        state_merkle_tree::create_state_merkle_tree_and_queue_account,
+    },
     indexer::{
         utils::create_address_merkle_tree_and_queue_account_with_assert, TestIndexerExtensions,
-    },
-    test_batch_forester::{create_batch_address_merkle_tree, create_batched_state_merkle_tree},
-    test_env::{
-        create_state_merkle_tree_and_queue_account, EnvAccounts, BATCHED_OUTPUT_QUEUE_TEST_KEYPAIR,
     },
 };
 
@@ -1363,19 +1365,20 @@ where
         self.add_address_merkle_tree_accounts(merkle_tree_keypair, queue_keypair, owning_program_id)
     }
 
+    #[cfg(feature = "devenv")]
     async fn add_address_merkle_tree_v2(
         &mut self,
         rpc: &mut R,
         merkle_tree_keypair: &Keypair,
         queue_keypair: &Keypair,
-        owning_program_id: Option<Pubkey>,
+        _owning_program_id: Option<Pubkey>,
     ) -> AddressMerkleTreeAccounts {
         info!(
             "Adding address merkle tree accounts v2 {:?}",
             merkle_tree_keypair.pubkey()
         );
 
-        let params = InitAddressTreeAccountsInstructionData::test_default();
+        let params = light_batched_merkle_tree::initialize_address_tree::InitAddressTreeAccountsInstructionData::test_default();
 
         info!(
             "Creating batched address merkle tree {:?}",
@@ -1389,7 +1392,11 @@ where
             merkle_tree_keypair.pubkey()
         );
 
-        self.add_address_merkle_tree_accounts(merkle_tree_keypair, queue_keypair, owning_program_id)
+        self.add_address_merkle_tree_accounts(
+            merkle_tree_keypair,
+            queue_keypair,
+            _owning_program_id,
+        )
     }
 
     pub async fn add_address_merkle_tree(
@@ -1409,6 +1416,9 @@ where
             )
             .await
         } else if version == 2 {
+            #[cfg(not(feature = "devenv"))]
+            panic!("Batched address merkle trees require the 'devenv' feature to be enabled");
+            #[cfg(feature = "devenv")]
             self.add_address_merkle_tree_v2(
                 rpc,
                 merkle_tree_keypair,
@@ -1459,22 +1469,28 @@ where
                 (FeeConfig::default().state_merkle_tree_rollover as i64,merkle_tree)
             }
             2 => {
-                let params = InitStateTreeAccountsInstructionData::test_default();
+                #[cfg(feature = "devenv")]
+                {
+                    let params =  light_batched_merkle_tree::initialize_state_tree::InitStateTreeAccountsInstructionData::test_default();
 
-                create_batched_state_merkle_tree(
-                    &self.payer,
-                    true,
-                    rpc,
-                    merkle_tree_keypair,
-                    queue_keypair,
-                    cpi_context_keypair,
-                    params,
-                ).await.unwrap();
-                let merkle_tree = Box::new(MerkleTree::<Poseidon>::new(
-                    DEFAULT_BATCH_STATE_TREE_HEIGHT as usize,
-                    0
-                ));
-                (FeeConfig::test_batched().state_merkle_tree_rollover as i64,merkle_tree)
+                    create_batched_state_merkle_tree(
+                        &self.payer,
+                        true,
+                        rpc,
+                        merkle_tree_keypair,
+                        queue_keypair,
+                        cpi_context_keypair,
+                        params,
+                    ).await.unwrap();
+                    let merkle_tree = Box::new(MerkleTree::<Poseidon>::new(
+                        DEFAULT_BATCH_STATE_TREE_HEIGHT as usize,
+                        0
+                    ));
+                    (FeeConfig::test_batched().state_merkle_tree_rollover as i64,merkle_tree)
+                }
+
+                #[cfg(not(feature = "devenv"))]
+                panic!("Batched state merkle trees require the 'devenv' feature to be enabled")
             }
             _ => panic!(
                 "add_state_merkle_tree: Version not supported, {}. Versions: 1 concurrent, 2 batched",
