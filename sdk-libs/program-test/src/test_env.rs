@@ -1266,7 +1266,7 @@ pub async fn create_state_merkle_tree_and_queue_account<R: RpcConnection>(
         )
     };
 
-    rpc.process_transaction(transaction.clone()).await
+    rpc.send_transaction(&transaction).await
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1350,7 +1350,7 @@ pub async fn create_address_merkle_tree_and_queue_account<R: RpcConnection>(
         &vec![&payer, &address_queue_keypair, &address_merkle_tree_keypair],
         context.get_latest_blockhash().await.unwrap(),
     );
-    let result = context.process_transaction(transaction.clone()).await;
+    let result = context.send_transaction(&transaction).await;
     #[allow(clippy::question_mark)]
     if let Err(e) = result {
         return Err(e);

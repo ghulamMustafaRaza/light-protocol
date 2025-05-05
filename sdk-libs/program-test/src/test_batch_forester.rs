@@ -55,7 +55,6 @@ use solana_sdk::{
     instruction::Instruction,
     pubkey::Pubkey,
     signature::{Keypair, Signature, Signer},
-    transaction::Transaction,
 };
 
 pub async fn perform_batch_append<Rpc: RpcConnection>(
@@ -452,23 +451,22 @@ pub async fn create_batched_state_merkle_tree<R: RpcConnection>(
         }
     };
 
-    let transaction = Transaction::new_signed_with_payer(
+    rpc.create_and_send_transaction(
         &[
             create_mt_account_ix,
             create_queue_account_ix,
             create_cpi_context_instruction,
             instruction,
         ],
-        Some(&payer.pubkey()),
-        &vec![
+        &payer.pubkey(),
+        &[
             payer,
             merkle_tree_keypair,
             queue_keypair,
             cpi_context_keypair,
         ],
-        rpc.get_latest_blockhash().await.unwrap(),
-    );
-    rpc.process_transaction(transaction).await
+    )
+    .await
 }
 
 pub async fn assert_registry_created_batched_state_merkle_tree<R: RpcConnection>(

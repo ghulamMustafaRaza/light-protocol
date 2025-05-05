@@ -409,6 +409,7 @@ impl RpcConnection for SolanaRpcConnection {
         .await
     }
 
+    #[cfg(feature = "devenv")]
     async fn process_transaction(
         &mut self,
         transaction: Transaction,
@@ -437,15 +438,6 @@ impl RpcConnection for SolanaRpcConnection {
             Ok((signature, slot))
         })
         .await
-    }
-
-    async fn process_transaction_with_config(
-        &mut self,
-        transaction: Transaction,
-        config: RpcSendTransactionConfig,
-    ) -> Result<Signature, RpcError> {
-        self.send_transaction_with_config(&transaction, RpcSendTransactionConfig { ..config })
-            .await
     }
 
     async fn confirm_transaction(&self, signature: Signature) -> Result<bool, RpcError> {

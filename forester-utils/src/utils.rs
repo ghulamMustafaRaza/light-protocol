@@ -29,7 +29,7 @@ pub async fn airdrop_lamports<R: RpcConnection>(
         &vec![&rpc.get_payer()],
         latest_blockhash,
     );
-    rpc.process_transaction(transaction).await?;
+    rpc.process_transaction_with_context(transaction).await?;
     Ok(())
 }
 

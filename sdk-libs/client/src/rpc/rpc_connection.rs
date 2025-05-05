@@ -96,17 +96,10 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
         transaction: Transaction,
     ) -> Result<Signature, RpcError>;
 
-    #[cfg(feature = "devenv")]
     async fn process_transaction_with_context(
         &mut self,
         transaction: Transaction,
     ) -> Result<(Signature, Slot), RpcError>;
-
-    async fn process_transaction_with_config(
-        &mut self,
-        transaction: Transaction,
-        config: RpcSendTransactionConfig,
-    ) -> Result<Signature, RpcError>;
 
     #[cfg(not(feature = "devenv"))]
     async fn create_and_send_transaction_with_event<T>(
@@ -127,7 +120,7 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
         let blockhash = self.get_latest_blockhash().await?;
         let transaction =
             Transaction::new_signed_with_payer(instructions, Some(payer), signers, blockhash);
-        self.process_transaction(transaction).await
+        self.send_transaction(&transaction).await
     }
 
     #[cfg(not(feature = "devenv"))]

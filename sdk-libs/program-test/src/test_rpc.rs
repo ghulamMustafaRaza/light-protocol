@@ -244,6 +244,7 @@ impl RpcConnection for ProgramTestRpcConnection {
         unimplemented!("get_program_accounts")
     }
 
+    #[cfg(feature = "devenv")]
     async fn process_transaction(
         &mut self,
         transaction: Transaction,
@@ -273,22 +274,6 @@ impl RpcConnection for ProgramTestRpcConnection {
         result.result.map_err(RpcError::TransactionError)?;
         let slot = self.context.banks_client.get_root_slot().await?;
         Ok((sig, slot))
-    }
-
-    async fn process_transaction_with_config(
-        &mut self,
-        transaction: Transaction,
-        _config: RpcSendTransactionConfig,
-    ) -> Result<Signature, RpcError> {
-        let sig = *transaction.signatures.first().unwrap();
-        let result = self
-            .context
-            .banks_client
-            .process_transaction_with_metadata(transaction)
-            .await
-            .map_err(RpcError::from)?;
-        result.result.map_err(RpcError::TransactionError)?;
-        Ok(sig)
     }
 
     async fn confirm_transaction(&self, _transaction: Signature) -> Result<bool, RpcError> {
