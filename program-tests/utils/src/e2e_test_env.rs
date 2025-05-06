@@ -331,10 +331,7 @@ pub struct TestForester {
     is_registered: Option<u64>,
 }
 
-pub struct E2ETestEnv<
-    R: RpcConnection + TestRpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
-> {
+pub struct E2ETestEnv<R: RpcConnection + TestRpcConnection, I: Indexer + TestIndexerExtensions<R>> {
     pub payer: Keypair,
     pub governance_keypair: Keypair,
     pub indexer: I,
@@ -357,11 +354,10 @@ pub struct E2ETestEnv<
     pub registration_epoch: u64,
 }
 
-impl<R: RpcConnection + TestRpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>
-    E2ETestEnv<R, I>
+impl<R: RpcConnection + TestRpcConnection, I: Indexer + TestIndexerExtensions<R>> E2ETestEnv<R, I>
 where
     R: RpcConnection,
-    I: Indexer<R>,
+    I: Indexer,
 {
     pub async fn new(
         mut rpc: R,

@@ -1,14 +1,16 @@
 use std::io;
 
-use solana_banks_client::BanksClientError;
 use solana_rpc_client_api::client_error::Error as ClientError;
 use solana_transaction_error::TransactionError;
 use thiserror::Error;
 
+use crate::indexer::IndexerError;
+
 #[derive(Error, Debug)]
 pub enum RpcError {
+    #[cfg(feature = "program-test")]
     #[error("BanksError: {0}")]
-    BanksError(#[from] BanksClientError),
+    BanksError(#[from] solana_banks_client::BanksClientError),
 
     #[error("TransactionError: {0}")]
     TransactionError(#[from] TransactionError),
@@ -28,9 +30,19 @@ pub enum RpcError {
     /// The chosen warp slot is not in the future, so warp is not performed
     #[error("Warp slot not in the future")]
     InvalidWarpSlot,
-}
 
-// Handle serialization errors from various sources
+    #[error("Account {0} does not exist")]
+    AccountDoesNotExist(String),
+
+    #[error("Invalid response data.")]
+    InvalidResponseData,
+
+    #[error("Indexer not initialized.")]
+    IndexerNotInitialized,
+
+    #[error("Indexer error: {0}")]
+    IndexerError(#[from] IndexerError),
+}
 
 // Convert light_compressed_account errors
 impl From<light_compressed_account::indexer_event::error::ParseIndexerEventError> for RpcError {

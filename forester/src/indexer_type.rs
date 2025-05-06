@@ -35,7 +35,7 @@ mod sealed {
 #[async_trait]
 pub trait IndexerType<R: RpcConnection>: sealed::Sealed {
     fn handle_state_bundle(
-        indexer: &mut impl Indexer<R>,
+        indexer: &mut impl Indexer,
         new_merkle_tree: Pubkey,
         new_queue: Pubkey,
         new_cpi_context: Pubkey,
@@ -43,7 +43,7 @@ pub trait IndexerType<R: RpcConnection>: sealed::Sealed {
         Self: Sized;
 
     fn handle_address_bundle(
-        indexer: &mut impl Indexer<R>,
+        indexer: &mut impl Indexer,
         new_merkle_tree: &Keypair,
         new_queue: &Keypair,
     ) where
@@ -51,14 +51,14 @@ pub trait IndexerType<R: RpcConnection>: sealed::Sealed {
 
     async fn finalize_batch_address_tree_update(
         rpc: &mut R,
-        indexer: &mut impl Indexer<R>,
+        indexer: &mut impl Indexer,
         new_merkle_tree_pubkey: Pubkey,
     ) where
         Self: Sized;
 
     async fn update_test_indexer_after_nullification(
         rpc: &mut R,
-        indexer: &mut impl Indexer<R>,
+        indexer: &mut impl Indexer,
         merkle_tree_pubkey: Pubkey,
         batch_index: usize,
     ) where
@@ -66,7 +66,7 @@ pub trait IndexerType<R: RpcConnection>: sealed::Sealed {
 
     async fn update_test_indexer_after_append(
         rpc: &mut R,
-        indexer: &mut impl Indexer<R>,
+        indexer: &mut impl Indexer,
         merkle_tree_pubkey: Pubkey,
         output_queue: Pubkey,
     ) where
@@ -78,7 +78,7 @@ impl<R: RpcConnection + light_client::rpc::merkle_tree::MerkleTreeExt> IndexerTy
     for TestIndexer<R>
 {
     fn handle_state_bundle(
-        indexer: &mut impl Indexer<R>,
+        indexer: &mut impl Indexer,
         new_merkle_tree: Pubkey,
         new_queue: Pubkey,
         new_cpi_context: Pubkey,
@@ -104,7 +104,7 @@ impl<R: RpcConnection + light_client::rpc::merkle_tree::MerkleTreeExt> IndexerTy
     }
 
     fn handle_address_bundle(
-        indexer: &mut impl Indexer<R>,
+        indexer: &mut impl Indexer,
         new_merkle_tree: &Keypair,
         new_queue: &Keypair,
     ) {
@@ -115,7 +115,7 @@ impl<R: RpcConnection + light_client::rpc::merkle_tree::MerkleTreeExt> IndexerTy
 
     async fn finalize_batch_address_tree_update(
         rpc: &mut R,
-        indexer: &mut impl Indexer<R>,
+        indexer: &mut impl Indexer,
         merkle_tree_pubkey: Pubkey,
     ) {
         if let Some(test_indexer) = (indexer as &mut dyn Any).downcast_mut::<TestIndexer<R>>() {
@@ -131,7 +131,7 @@ impl<R: RpcConnection + light_client::rpc::merkle_tree::MerkleTreeExt> IndexerTy
 
     async fn update_test_indexer_after_nullification(
         rpc: &mut R,
-        indexer: &mut impl Indexer<R>,
+        indexer: &mut impl Indexer,
         merkle_tree_pubkey: Pubkey,
         batch_index: usize,
     ) where
@@ -146,7 +146,7 @@ impl<R: RpcConnection + light_client::rpc::merkle_tree::MerkleTreeExt> IndexerTy
 
     async fn update_test_indexer_after_append(
         rpc: &mut R,
-        indexer: &mut impl Indexer<R>,
+        indexer: &mut impl Indexer,
         merkle_tree_pubkey: Pubkey,
         output_queue: Pubkey,
     ) where
@@ -164,7 +164,7 @@ impl<R: RpcConnection + light_client::rpc::merkle_tree::MerkleTreeExt> IndexerTy
 #[async_trait]
 impl<R: RpcConnection> IndexerType<R> for PhotonIndexer<R> {
     fn handle_state_bundle(
-        _indexer: &mut impl Indexer<R>,
+        _indexer: &mut impl Indexer,
         _new_merkle_tree: Pubkey,
         _new_queue: Pubkey,
         _new_cpi_context: Pubkey,
@@ -173,7 +173,7 @@ impl<R: RpcConnection> IndexerType<R> for PhotonIndexer<R> {
     }
 
     fn handle_address_bundle(
-        _indexer: &mut impl Indexer<R>,
+        _indexer: &mut impl Indexer,
         _new_merkle_tree: &Keypair,
         _new_queue: &Keypair,
     ) {
@@ -182,7 +182,7 @@ impl<R: RpcConnection> IndexerType<R> for PhotonIndexer<R> {
 
     async fn finalize_batch_address_tree_update(
         _rpc: &mut R,
-        _indexer: &mut impl Indexer<R>,
+        _indexer: &mut impl Indexer,
         _new_merkle_tree_pubkey: Pubkey,
     ) {
         // No-op for production indexer
@@ -190,7 +190,7 @@ impl<R: RpcConnection> IndexerType<R> for PhotonIndexer<R> {
 
     async fn update_test_indexer_after_nullification(
         _rpc: &mut R,
-        _indexer: &mut impl Indexer<R>,
+        _indexer: &mut impl Indexer,
         _merkle_tree_pubkey: Pubkey,
         _batch_index: usize,
     ) {
@@ -199,7 +199,7 @@ impl<R: RpcConnection> IndexerType<R> for PhotonIndexer<R> {
 
     async fn update_test_indexer_after_append(
         _rpc: &mut R,
-        _indexer: &mut impl Indexer<R>,
+        _indexer: &mut impl Indexer,
         _merkle_tree_pubkey: Pubkey,
         _output_queue: Pubkey,
     ) {
@@ -207,7 +207,7 @@ impl<R: RpcConnection> IndexerType<R> for PhotonIndexer<R> {
     }
 }
 
-pub async fn rollover_state_merkle_tree<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
+pub async fn rollover_state_merkle_tree<R: RpcConnection, I: Indexer + IndexerType<R>>(
     config: Arc<ForesterConfig>,
     rpc: &mut R,
     indexer: Arc<Mutex<I>>,
@@ -244,7 +244,7 @@ pub async fn rollover_state_merkle_tree<R: RpcConnection, I: Indexer<R> + Indexe
     Ok(())
 }
 
-pub async fn rollover_address_merkle_tree<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
+pub async fn rollover_address_merkle_tree<R: RpcConnection, I: Indexer + IndexerType<R>>(
     config: Arc<ForesterConfig>,
     rpc: &mut R,
     indexer: Arc<Mutex<I>>,
@@ -277,10 +277,7 @@ pub async fn rollover_address_merkle_tree<R: RpcConnection, I: Indexer<R> + Inde
     Ok(())
 }
 
-pub async fn finalize_batch_address_tree_update<
-    R: RpcConnection,
-    I: Indexer<R> + IndexerType<R>,
->(
+pub async fn finalize_batch_address_tree_update<R: RpcConnection, I: Indexer + IndexerType<R>>(
     rpc: &mut R,
     indexer: Arc<Mutex<I>>,
     new_merkle_tree_pubkey: Pubkey,
@@ -297,7 +294,7 @@ pub async fn finalize_batch_address_tree_update<
 
 pub async fn update_test_indexer_after_nullification<
     R: RpcConnection,
-    I: Indexer<R> + IndexerType<R>,
+    I: Indexer + IndexerType<R>,
 >(
     rpc: &mut R,
     indexer: Arc<Mutex<I>>,
@@ -315,7 +312,7 @@ pub async fn update_test_indexer_after_nullification<
     Ok(())
 }
 
-pub async fn update_test_indexer_after_append<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
+pub async fn update_test_indexer_after_append<R: RpcConnection, I: Indexer + IndexerType<R>>(
     rpc: &mut R,
     indexer: Arc<Mutex<I>>,
     merkle_tree_pubkey: Pubkey,

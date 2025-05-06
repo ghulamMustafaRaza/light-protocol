@@ -119,7 +119,7 @@ pub fn generate_pubkey_254() -> Pubkey {
 #[allow(dead_code)]
 pub async fn assert_new_address_proofs_for_photon_and_test_indexer<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     indexer: &mut I,
     trees: &[Pubkey],
@@ -188,10 +188,7 @@ pub async fn assert_new_address_proofs_for_photon_and_test_indexer<
 }
 
 #[allow(dead_code)]
-pub async fn assert_accounts_by_owner<
-    R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
->(
+pub async fn assert_accounts_by_owner<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     indexer: &mut I,
     user: &User,
     photon_indexer: &PhotonIndexer<R>,
@@ -227,7 +224,7 @@ pub async fn assert_accounts_by_owner<
 #[allow(dead_code)]
 pub async fn assert_account_proofs_for_photon_and_test_indexer<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     indexer: &mut I,
     user_pubkey: &Pubkey,

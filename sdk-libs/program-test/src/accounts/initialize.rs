@@ -1,20 +1,15 @@
-use account_compression::{
-    utils::constants::GROUP_AUTHORITY_SEED, AddressMerkleTreeConfig, AddressQueueConfig,
-    GroupAuthority, NullifierQueueConfig, StateMerkleTreeConfig,
-};
+use std::net::ToSocketAddrs;
+
+use account_compression::{utils::constants::GROUP_AUTHORITY_SEED, GroupAuthority};
 use forester_utils::{
     forester_epoch::{Epoch, TreeAccounts},
     registry::register_test_forester,
 };
-use light_batched_merkle_tree::{
-    initialize_address_tree::InitAddressTreeAccountsInstructionData,
-    initialize_state_tree::InitStateTreeAccountsInstructionData,
-};
-use light_client::rpc::RpcConnection;
+
+use light_client::rpc::{RpcConnection, RpcError};
 use light_compressed_account::TreeType;
 use light_registry::{
     account_compression_cpi::sdk::get_registered_program_pda,
-    protocol_config::state::ProtocolConfig,
     sdk::{
         create_finalize_registration_instruction,
         create_initialize_governance_authority_instruction,
@@ -41,30 +36,48 @@ use crate::{
         env_accounts::EnvAccounts, env_keypairs::*,
         state_merkle_tree::create_state_merkle_tree_and_queue_account,
     },
+    test_env::ProgramTestConfig,
     test_rpc::TestRpcConnection,
 };
 
 #[allow(clippy::too_many_arguments)]
 pub async fn initialize_accounts<R: RpcConnection + TestRpcConnection>(
     context: &mut R,
+    config: &ProgramTestConfig,
     keypairs: EnvAccountKeypairs,
-    protocol_config: ProtocolConfig,
-    register_forester_and_advance_to_active_phase: bool,
-    _skip_register_programs: bool,
-    skip_second_v1_tree: bool,
-    v1_state_tree_config: StateMerkleTreeConfig,
-    v1_nullifier_queue_config: NullifierQueueConfig,
-    v1_address_tree_config: AddressMerkleTreeConfig,
-    v1_address_queue_config: AddressQueueConfig,
-    batched_tree_init_params: InitStateTreeAccountsInstructionData,
-    _batched_address_tree_init_params: Option<InitAddressTreeAccountsInstructionData>,
-) -> EnvAccounts {
+    // protocol_config: ProtocolConfig,
+    // register_forester_and_advance_to_active_phase: bool,
+    // _skip_register_programs: bool,
+    // skip_second_v1_tree: bool,
+    // v1_state_tree_config: StateMerkleTreeConfig,
+    // v1_nullifier_queue_config: NullifierQueueConfig,
+    // v1_address_tree_config: AddressMerkleTreeConfig,
+    // v1_address_queue_config: AddressQueueConfig,
+    // batched_tree_init_params: InitStateTreeAccountsInstructionData,
+    // _batched_address_tree_init_params: Option<InitAddressTreeAccountsInstructionData>,
+) -> Result<EnvAccounts, RpcError> {
+    let ProgramTestConfig {
+        protocol_config,
+        register_forester_and_advance_to_active_phase,
+        batched_tree_init_params,
+        batched_address_tree_init_params,
+        skip_register_programs,
+        skip_second_v1_tree,
+        v1_state_tree_config,
+        v1_nullifier_queue_config,
+        v1_address_tree_config,
+        v1_address_queue_config,
+        ..
+    } = config;
+    let _batched_address_tree_init_params = batched_address_tree_init_params;
+    let _batched_tree_init_params = batched_tree_init_params;
+    let _skip_register_programs = skip_register_programs;
     let cpi_authority_pda = get_cpi_authority_pda();
     let protocol_config_pda = get_protocol_config_pda_address();
     let instruction = create_initialize_governance_authority_instruction(
         keypairs.governance_authority.pubkey(),
         keypairs.governance_authority.pubkey(),
-        protocol_config,
+        *protocol_config,
     );
     let update_instruction = create_update_protocol_config_instruction(
         keypairs.governance_authority.pubkey(),
@@ -77,8 +90,7 @@ pub async fn initialize_accounts<R: RpcConnection + TestRpcConnection>(
             &keypairs.governance_authority.pubkey(),
             &[&keypairs.governance_authority],
         )
-        .await
-        .unwrap();
+        .await?;
 
     let group_pda = initialize_new_group(
         &keypairs.group_pda_seed,
@@ -86,27 +98,31 @@ pub async fn initialize_accounts<R: RpcConnection + TestRpcConnection>(
         context,
         cpi_authority_pda.0,
     )
-    .await;
+    .await?;
 
     let gov_authority = context
         .get_anchor_account::<GroupAuthority>(&protocol_config_pda.0)
-        .await
-        .unwrap()
-        .unwrap();
+        .await?
+        .ok_or(RpcError::AccountDoesNotExist(
+            protocol_config_pda.0.to_string(),
+        ))?;
     assert_eq!(
         gov_authority.authority,
         keypairs.governance_authority.pubkey()
     );
+    if gov_authority.authority != keypairs.governance_authority.pubkey() {
+        return Err(RpcError::CustomError(
+            "Invalid governance authority.".to_string(),
+        ));
+    }
 
-    println!("forester: {:?}", keypairs.forester.pubkey());
     register_test_forester(
         context,
         &keypairs.governance_authority,
         &keypairs.forester.pubkey(),
         ForesterConfig::default(),
     )
-    .await
-    .unwrap();
+    .await?;
     println!("Registered register_test_forester ");
 
     #[cfg(feature = "devenv")]
@@ -117,16 +133,14 @@ pub async fn initialize_accounts<R: RpcConnection + TestRpcConnection>(
             &group_pda,
             &keypairs.system_program,
         )
-        .await
-        .unwrap();
+        .await?;
         register_program_with_registry_program(
             context,
             &keypairs.governance_authority,
             &group_pda,
             &keypairs.registry_program,
         )
-        .await
-        .unwrap();
+        .await?;
     }
     println!("Registered system program");
     let merkle_tree_pubkey = keypairs.state_merkle_tree.pubkey();
@@ -144,12 +158,8 @@ pub async fn initialize_accounts<R: RpcConnection + TestRpcConnection>(
         &v1_state_tree_config,
         &v1_nullifier_queue_config,
     )
-    .await
-    .unwrap();
-    assert_eq!(
-        batched_tree_init_params.additional_bytes,
-        ProtocolConfig::default().cpi_context_size
-    );
+    .await?;
+
     if !skip_second_v1_tree {
         create_state_merkle_tree_and_queue_account(
             &keypairs.governance_authority,
@@ -164,31 +174,30 @@ pub async fn initialize_accounts<R: RpcConnection + TestRpcConnection>(
             &v1_state_tree_config,
             &v1_nullifier_queue_config,
         )
-        .await
-        .unwrap();
+        .await?;
     }
     #[cfg(feature = "devenv")]
-    create_batched_state_merkle_tree(
-        &keypairs.governance_authority,
-        true,
-        context,
-        &keypairs.batched_state_merkle_tree,
-        &keypairs.batched_output_queue,
-        &keypairs.batched_cpi_context,
-        batched_tree_init_params,
-    )
-    .await
-    .unwrap();
+    if let Some(batched_tree_init_params) = _batched_tree_init_params {
+        create_batched_state_merkle_tree(
+            &keypairs.governance_authority,
+            true,
+            context,
+            &keypairs.batched_state_merkle_tree,
+            &keypairs.batched_output_queue,
+            &keypairs.batched_cpi_context,
+            *batched_tree_init_params,
+        )
+        .await?;
+    }
     #[cfg(feature = "devenv")]
     if let Some(params) = _batched_address_tree_init_params {
         create_batch_address_merkle_tree(
             context,
             &keypairs.governance_authority,
             &keypairs.batch_address_merkle_tree,
-            params,
+            *params,
         )
-        .await
-        .unwrap();
+        .await?;
     }
     create_address_merkle_tree_and_queue_account(
         &keypairs.governance_authority,
@@ -202,25 +211,22 @@ pub async fn initialize_accounts<R: RpcConnection + TestRpcConnection>(
         &v1_address_queue_config,
         0,
     )
-    .await
-    .unwrap();
+    .await?;
 
     let registered_system_program_pda = get_registered_program_pda(&light_system_program::ID);
     let registered_registry_program_pda = get_registered_program_pda(&light_registry::ID);
-    let forester_epoch = if register_forester_and_advance_to_active_phase {
+    let forester_epoch = if *register_forester_and_advance_to_active_phase {
         let mut registered_epoch = Epoch::register(
             context,
             &protocol_config,
             &keypairs.forester,
             &keypairs.forester.pubkey(),
         )
-        .await
-        .unwrap()
+        .await?
         .unwrap();
         context
             .warp_to_slot(registered_epoch.phases.active.start)
-            .await
-            .unwrap();
+            .await?;
         let tree_accounts = vec![
             TreeAccounts {
                 tree_type: TreeType::StateV1,
@@ -238,8 +244,7 @@ pub async fn initialize_accounts<R: RpcConnection + TestRpcConnection>(
 
         registered_epoch
             .fetch_account_and_add_trees_with_schedule(context, &tree_accounts)
-            .await
-            .unwrap();
+            .await?;
         let ix = create_finalize_registration_instruction(
             &keypairs.forester.pubkey(),
             &keypairs.forester.pubkey(),
@@ -247,13 +252,12 @@ pub async fn initialize_accounts<R: RpcConnection + TestRpcConnection>(
         );
         context
             .create_and_send_transaction(&[ix], &keypairs.forester.pubkey(), &[&keypairs.forester])
-            .await
-            .unwrap();
+            .await?;
         Some(registered_epoch)
     } else {
         None
     };
-    EnvAccounts {
+    Ok(EnvAccounts {
         merkle_tree_pubkey,
         nullifier_queue_pubkey,
         group_pda,
@@ -271,30 +275,30 @@ pub async fn initialize_accounts<R: RpcConnection + TestRpcConnection>(
         batched_output_queue: keypairs.batched_output_queue.pubkey(),
         batched_state_merkle_tree: keypairs.batched_state_merkle_tree.pubkey(),
         batch_address_merkle_tree: keypairs.batch_address_merkle_tree.pubkey(),
-    }
+    })
 }
 
 #[cfg(feature = "devenv")]
 pub async fn setup_accounts(
     keypairs: EnvAccountKeypairs,
     url: light_client::rpc::solana_rpc::SolanaRpcUrl,
-) -> EnvAccounts {
+) -> Result<EnvAccounts, RpcError> {
     let mut rpc = light_client::rpc::SolanaRpcConnection::new(url, None);
-    let params = InitStateTreeAccountsInstructionData::test_default();
 
     initialize_accounts(
         &mut rpc,
+        // ProtocolConfig::default(),
+        // false,
+        // false,
+        // false,
+        // StateMerkleTreeConfig::default(),
+        // NullifierQueueConfig::default(),
+        // AddressMerkleTreeConfig::default(),
+        // AddressQueueConfig::default(),
+        // params,
+        // Some(InitAddressTreeAccountsInstructionData::test_default()),
+        &ProgramTestConfig::default_with_batched_trees(),
         keypairs,
-        ProtocolConfig::default(),
-        false,
-        false,
-        false,
-        StateMerkleTreeConfig::default(),
-        NullifierQueueConfig::default(),
-        AddressMerkleTreeConfig::default(),
-        AddressQueueConfig::default(),
-        params,
-        Some(InitAddressTreeAccountsInstructionData::test_default()),
     )
     .await
 }
@@ -312,7 +316,7 @@ pub async fn initialize_new_group<R: RpcConnection>(
     payer: &Keypair,
     context: &mut R,
     authority: Pubkey,
-) -> Pubkey {
+) -> Result<Pubkey, RpcError> {
     let group_pda = Pubkey::find_program_address(
         &[
             GROUP_AUTHORITY_SEED,
@@ -335,16 +339,24 @@ pub async fn initialize_new_group<R: RpcConnection>(
             &payer.pubkey(),
             &[payer, group_seed_keypair],
         )
-        .await
-        .unwrap();
+        .await?;
     let group_authority = context
         .get_anchor_account::<GroupAuthority>(&group_pda)
-        .await
-        .unwrap()
-        .unwrap();
-    assert_eq!(group_authority.authority, authority);
-    assert_eq!(group_authority.seed, group_seed_keypair.pubkey());
-    group_pda
+        .await?
+        .ok_or(RpcError::CustomError(
+            "Group authority account does not exist.".to_string(),
+        ))?;
+    if group_authority.authority != authority {
+        return Err(RpcError::CustomError(
+            "Group authority account does not match the provided authority.".to_string(),
+        ));
+    }
+    if group_authority.seed != group_seed_keypair.pubkey() {
+        return Err(RpcError::CustomError(
+            "Group authority account does not match the provided seed.".to_string(),
+        ));
+    }
+    Ok(group_pda)
 }
 
 // TODO: unify with keypairs

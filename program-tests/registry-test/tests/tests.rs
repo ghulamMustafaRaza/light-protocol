@@ -1995,7 +1995,7 @@ async fn test_batch_address_tree() {
 
 pub async fn perform_batch_address_merkle_tree_update<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     rpc: &mut R,
     test_indexer: &mut I,

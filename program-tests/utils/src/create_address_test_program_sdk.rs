@@ -70,7 +70,7 @@ pub fn create_pda_instruction(input_params: CreateCompressedPdaInstructionInputs
 
 pub async fn perform_create_pda_with_event_rnd<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     test_indexer: &mut I,
     rpc: &mut R,
@@ -84,7 +84,7 @@ pub async fn perform_create_pda_with_event_rnd<
 
 pub async fn perform_create_pda_with_event<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     test_indexer: &mut I,
     rpc: &mut R,

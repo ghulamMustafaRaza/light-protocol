@@ -6,6 +6,11 @@ license = "Apache-2.0"
 repository = "https://github.com/lightprotocol/light-protocol"
 description = "Utility library for Light's Forester node implementation"
 
+[features]
+default = ["v2"]
+devenv = ["v2", "light-client/devenv"]
+v2 = ["light-client/v2"]
+
 [dependencies]
 
 # Light Protocol

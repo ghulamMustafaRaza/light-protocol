@@ -18,7 +18,10 @@ use solana_transaction::Transaction;
 use solana_transaction_error::TransactionError;
 use solana_transaction_status::TransactionStatus;
 
-use crate::rpc::errors::RpcError;
+use crate::{
+    indexer::{AddressWithTree, Indexer, ProofRpcResult},
+    rpc::errors::RpcError,
+};
 
 #[async_trait]
 pub trait RpcConnection: Send + Sync + Debug + 'static {
@@ -166,6 +169,21 @@ pub trait RpcConnection: Send + Sync + Debug + 'static {
         signers: &[&Keypair],
         transaction_params: Option<TransactionParams>,
     ) -> Result<Option<(PublicTransactionEvent, Signature, Slot)>, RpcError>;
+
+    async fn get_validity_proof(
+        &self,
+        hashes: Vec<[u8; 32]>,
+        new_addresses_with_trees: Vec<AddressWithTree>,
+    ) -> Result<ProofRpcResult, RpcError>;
+
+    #[cfg(feature = "v2")]
+    async fn get_validity_proof_v2(
+        &self,
+        hashes: Vec<[u8; 32]>,
+        new_addresses_with_trees: Vec<AddressWithTree>,
+    ) -> Result<crate::indexer::ProofRpcResultV2, RpcError>;
+
+    fn indexer(&self) -> Result<&impl Indexer, RpcError>;
 }
 
 #[cfg(feature = "devenv")]

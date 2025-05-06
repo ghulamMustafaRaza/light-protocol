@@ -1562,10 +1562,7 @@ async fn test_create_pda_in_program_owned_merkle_trees() {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn perform_create_pda_failing<
-    R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
->(
+pub async fn perform_create_pda_failing<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     test_indexer: &mut I,
     rpc: &mut R,
     env: &EnvAccounts,
@@ -1603,7 +1600,7 @@ pub async fn perform_create_pda_failing<
 #[allow(clippy::too_many_arguments)]
 pub async fn perform_create_pda_with_event<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     test_indexer: &mut I,
     rpc: &mut R,
@@ -1653,7 +1650,7 @@ pub async fn perform_create_pda_with_event<
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn perform_create_pda<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+async fn perform_create_pda<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     env: &EnvAccounts,
     seed: [u8; 32],
     test_indexer: &mut I,
@@ -1844,7 +1841,7 @@ async fn perform_create_pda<R: RpcConnection, I: Indexer<R> + TestIndexerExtensi
     create_pda_instruction(create_ix_inputs)
 }
 
-pub async fn assert_created_pda<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn assert_created_pda<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     test_indexer: &mut I,
     env: &EnvAccounts,
     payer: &Keypair,
@@ -1890,7 +1887,7 @@ pub async fn assert_created_pda<R: RpcConnection, I: Indexer<R> + TestIndexerExt
 #[allow(clippy::too_many_arguments)]
 pub async fn perform_with_input_accounts<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     test_indexer: &mut I,
     rpc: &mut R,

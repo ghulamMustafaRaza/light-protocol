@@ -797,7 +797,7 @@ pub async fn assert_registry_created_batched_address_merkle_tree<R: RpcConnectio
 
 pub async fn create_batch_update_address_tree_instruction_data_with_proof<
     R: RpcConnection,
-    I: Indexer<R>,
+    I: Indexer,
 >(
     rpc: &mut R,
     indexer: &mut I,

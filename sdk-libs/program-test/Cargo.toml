@@ -4,11 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-devenv = ["light-client/devenv"]
 default = []
+devenv = ["v2", "light-client/devenv", "forester-utils/devenv"]
+v2 = ["light-client/v2", "forester-utils/v2"]
 
 [dependencies]
-light-client = { workspace = true }
+light-client = { workspace = true, features = ["program-test"] }
 light-prover-client = { workspace = true }
 light-sdk = { workspace = true, features = ["anchor"] }
 light-indexed-merkle-tree = { workspace = true, features = ["solana"] }

@@ -84,7 +84,7 @@ pub enum MerkleProofType {
 }
 
 #[derive(Debug)]
-pub struct EpochManager<R: RpcConnection, I: Indexer<R>> {
+pub struct EpochManager<R: RpcConnection, I: Indexer> {
     config: Arc<ForesterConfig>,
     protocol_config: Arc<ProtocolConfig>,
     rpc_pool: Arc<SolanaRpcPool<R>>,
@@ -97,7 +97,7 @@ pub struct EpochManager<R: RpcConnection, I: Indexer<R>> {
     new_tree_sender: broadcast::Sender<TreeAccounts>,
 }
 
-impl<R: RpcConnection, I: Indexer<R>> Clone for EpochManager<R, I> {
+impl<R: RpcConnection, I: Indexer> Clone for EpochManager<R, I> {
     fn clone(&self) -> Self {
         Self {
             config: self.config.clone(),
@@ -114,7 +114,7 @@ impl<R: RpcConnection, I: Indexer<R>> Clone for EpochManager<R, I> {
     }
 }
 
-impl<R: RpcConnection, I: Indexer<R> + IndexerType<R>> EpochManager<R, I> {
+impl<R: RpcConnection, I: Indexer + IndexerType<R>> EpochManager<R, I> {
     #[allow(clippy::too_many_arguments)]
     pub async fn new(
         config: Arc<ForesterConfig>,
@@ -1183,7 +1183,7 @@ impl<R: RpcConnection, I: Indexer<R> + IndexerType<R>> EpochManager<R, I> {
     skip(config, protocol_config, rpc_pool, indexer, shutdown, work_report_sender, slot_tracker),
     fields(forester = %config.payer_keypair.pubkey())
 )]
-pub async fn run_service<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
+pub async fn run_service<R: RpcConnection, I: Indexer + IndexerType<R>>(
     config: Arc<ForesterConfig>,
     protocol_config: Arc<ProtocolConfig>,
     rpc_pool: Arc<SolanaRpcPool<R>>,

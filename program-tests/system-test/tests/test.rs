@@ -190,10 +190,7 @@ async fn invoke_failing_test() {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn failing_transaction_inputs<
-    R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
->(
+pub async fn failing_transaction_inputs<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     context: &mut R,
     test_indexer: &mut I,
     payer: &Keypair,
@@ -2510,7 +2507,7 @@ pub enum TestMode {
 
 pub async fn double_spend_compressed_account<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     context: &mut R,
     test_indexer: &mut I,

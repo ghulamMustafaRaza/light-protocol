@@ -1,11 +1,8 @@
 #[cfg(feature = "devenv")]
 use {
     crate::rpc::{RpcConnection, RpcError},
-    solana_banks_client::BanksClientError,
-    solana_instruction::error::InstructionError,
     solana_keypair::Keypair,
     solana_pubkey::Pubkey,
-    solana_transaction_error::TransactionError,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -110,9 +107,7 @@ pub async fn assert_transaction_params(
             );
             println!("network_fee: {}", network_fee);
             println!("num signers {}", deduped_signers.len());
-            return Err(RpcError::from(BanksClientError::TransactionError(
-                TransactionError::InstructionError(0, InstructionError::Custom(11111)),
-            )));
+            return Err(RpcError::CustomError("Transaction fee error.".to_string()));
         }
     }
     Ok(())

@@ -36,7 +36,7 @@ use crate::assert_compressed_tx::{
 };
 
 #[allow(clippy::too_many_arguments)]
-pub async fn create_addresses_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn create_addresses_test<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     rpc: &mut R,
     test_indexer: &mut I,
     address_merkle_tree_pubkeys: &[Pubkey],
@@ -114,7 +114,7 @@ pub async fn create_addresses_test<R: RpcConnection, I: Indexer<R> + TestIndexer
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn compress_sol_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn compress_sol_test<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     rpc: &mut R,
     test_indexer: &mut I,
     authority: &Keypair,
@@ -173,7 +173,7 @@ pub async fn compress_sol_test<R: RpcConnection, I: Indexer<R> + TestIndexerExte
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn decompress_sol_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn decompress_sol_test<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     rpc: &mut R,
     test_indexer: &mut I,
     authority: &Keypair,
@@ -219,7 +219,7 @@ pub async fn decompress_sol_test<R: RpcConnection, I: Indexer<R> + TestIndexerEx
 #[allow(clippy::too_many_arguments)]
 pub async fn transfer_compressed_sol_test<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     rpc: &mut R,
     test_indexer: &mut I,
@@ -287,7 +287,7 @@ pub async fn transfer_compressed_sol_test<
 }
 
 #[derive(Debug)]
-pub struct CompressedTransactionTestInputs<'a, R: RpcConnection, I: Indexer<R>> {
+pub struct CompressedTransactionTestInputs<'a, R: RpcConnection, I: Indexer> {
     rpc: &'a mut R,
     test_indexer: &'a mut I,
     fee_payer: &'a Keypair,
@@ -308,7 +308,7 @@ pub struct CompressedTransactionTestInputs<'a, R: RpcConnection, I: Indexer<R>> 
 #[allow(clippy::too_many_arguments)]
 pub async fn compressed_transaction_test<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     inputs: CompressedTransactionTestInputs<'_, R, I>,
 ) -> Result<Signature, RpcError> {

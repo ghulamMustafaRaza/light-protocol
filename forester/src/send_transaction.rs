@@ -304,14 +304,14 @@ pub struct BuildTransactionBatchConfig {
     pub enable_priority_fees: bool,
 }
 
-pub struct EpochManagerTransactions<R: RpcConnection, I: Indexer<R>> {
+pub struct EpochManagerTransactions<R: RpcConnection, I: Indexer> {
     pub indexer: Arc<Mutex<I>>,
     pub epoch: u64,
     pub phantom: std::marker::PhantomData<R>,
 }
 
 #[async_trait]
-impl<R: RpcConnection, I: Indexer<R>> TransactionBuilder for EpochManagerTransactions<R, I> {
+impl<R: RpcConnection, I: Indexer> TransactionBuilder for EpochManagerTransactions<R, I> {
     fn epoch(&self) -> u64 {
         self.epoch
     }
@@ -353,7 +353,7 @@ impl<R: RpcConnection, I: Indexer<R>> TransactionBuilder for EpochManagerTransac
 }
 
 /// Work items should be of only one type and tree
-pub async fn fetch_proofs_and_create_instructions<R: RpcConnection, I: Indexer<R>>(
+pub async fn fetch_proofs_and_create_instructions<R: RpcConnection, I: Indexer>(
     authority: Pubkey,
     derivation: Pubkey,
     indexer: Arc<Mutex<I>>,

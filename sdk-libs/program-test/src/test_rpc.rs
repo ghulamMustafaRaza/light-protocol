@@ -4,12 +4,16 @@ use async_trait::async_trait;
 use borsh::BorshDeserialize;
 #[cfg(feature = "devenv")]
 use light_client::fee::{assert_transaction_params, TransactionParams};
-use light_client::rpc::{merkle_tree::MerkleTreeExt, RpcConnection, RpcError, SolanaRpcConnection};
+use light_client::{
+    indexer::Indexer,
+    rpc::{merkle_tree::MerkleTreeExt, RpcConnection, RpcError, SolanaRpcConnection},
+};
 use light_compressed_account::indexer_event::{
     event::{BatchPublicTransactionEvent, PublicTransactionEvent},
     parse::event_from_light_transaction,
 };
 use light_prover_client::gnark::helpers::{ProverConfig, ProverMode};
+use light_sdk::Hash;
 use solana_banks_client::BanksClientError;
 use solana_program_test::ProgramTestContext;
 use solana_rpc_client_api::config::RpcSendTransactionConfig;
@@ -17,7 +21,6 @@ use solana_sdk::{
     account::{Account, AccountSharedData},
     clock::Slot,
     commitment_config::CommitmentConfig,
-    hash::Hash,
     instruction::Instruction,
     pubkey::Pubkey,
     signature::{Keypair, Signature, Signer},
@@ -34,6 +37,7 @@ use crate::{
 pub struct ProgramTestRpcConnection {
     pub context: ProgramTestContext,
     pub indexer: Option<TestIndexer<ProgramTestRpcConnection>>,
+    pub env_accounts: EnvAccounts,
 }
 
 pub trait TestRpcConnection {
@@ -59,7 +63,24 @@ impl ProgramTestRpcConnection {
         Self {
             context,
             indexer: None,
+            env_accounts: EnvAccounts::get_local_test_validator_accounts(),
         }
+    }
+
+    pub fn indexer(&self) -> Result<&TestIndexer, RpcError> {
+        self.indexer
+            .as_ref()
+            .ok_or(RpcError::CustomError("Indexer not Initialized".to_string()))
+    }
+
+    pub fn indexer_mut(&mut self) -> Result<&mut TestIndexer, RpcError> {
+        self.indexer
+            .as_mut()
+            .ok_or(RpcError::CustomError("Indexer not Initialized".to_string()))
+    }
+
+    pub fn env_accounts(&self) -> &EnvAccounts {
+        &self.env_accounts
     }
 
     pub async fn add_indexer(
@@ -75,12 +96,8 @@ impl ProgramTestRpcConnection {
         } else {
             None
         };
-        let indexer = TestIndexer::<ProgramTestRpcConnection>::init_from_env(
-            &self.context.payer,
-            env_accounts,
-            prover_config,
-        )
-        .await;
+        let indexer =
+            TestIndexer::init_from_env(&self.context.payer, env_accounts, prover_config).await;
         self.indexer = Some(indexer);
         Ok(())
     }
@@ -376,10 +393,12 @@ impl RpcConnection for ProgramTestRpcConnection {
     }
 
     async fn get_latest_blockhash(&mut self) -> Result<Hash, RpcError> {
-        self.context
+        Ok(self
+            .context
             .get_new_latest_blockhash()
             .await
-            .map_err(|e| RpcError::from(BanksClientError::from(e)))
+            .map_err(|e| RpcError::from(BanksClientError::from(e)))?
+            .to_bytes())
     }
 
     async fn get_slot(&mut self) -> Result<u64, RpcError> {
@@ -558,6 +577,99 @@ impl RpcConnection for ProgramTestRpcConnection {
         }
 
         Ok(sig)
+    }
+
+    async fn indexer(&self) -> Result<&impl Indexer, IndexerError> {
+        self.indexer
+            .as_ref()
+            .ok_or(IndexerError::IndexerNotInitialized)
+    }
+
+    async fn get_validity_proof(
+        &self,
+        hashes: Vec<Hash>,
+        new_addresses_with_trees: Vec<AddressWithTree>,
+    ) -> Result<ProofRpcResult, IndexerError> {
+        let mut state_merkle_tree_pubkeys = Vec::new();
+
+        for hash in hashes.iter() {
+            state_merkle_tree_pubkeys.push(Pubkey::from_str_const(
+                self.get_compressed_account(*x).await.unwrap().tree.as_str(),
+            ));
+        }
+        let state_merkle_tree_pubkeys = if state_merkle_tree_pubkeys.is_empty() {
+            None
+        } else {
+            Some(state_merkle_tree_pubkeys)
+        };
+        let hashes = if hashes.is_empty() {
+            None
+        } else {
+            Some(hashes)
+        };
+        let new_addresses = if new_addresses_with_trees.is_empty() {
+            None
+        } else {
+            Some(new_addresses_with_trees.iter().map(|x| x.address).collect())
+        };
+        let address_merkle_tree_pubkeys = if new_addresses_with_trees.is_empty() {
+            None
+        } else {
+            Some(new_addresses_with_trees.iter().map(|x| x.tree).collect())
+        };
+        self.indexer()?
+            .create_proof_for_compressed_accounts(
+                compressed_accounts,
+                state_merkle_tree_pubkeys,
+                new_addresses,
+                address_merkle_tree_pubkeys,
+                rpc,
+            )
+            .await
+    }
+
+    #[cfg(feature = "v2")]
+    async fn get_validity_proof_v2(
+        &self,
+        hashes: Vec<Hash>,
+        new_addresses_with_trees: Vec<AddressWithTree>,
+    ) -> Result<super::types::ProofRpcResultV2, IndexerError> {
+        let mut state_merkle_tree_pubkeys = Vec::new();
+
+        for hash in hashes.iter() {
+            state_merkle_tree_pubkeys.push(Pubkey::from_str_const(
+                self.get_compressed_account(*x).await.unwrap().tree.as_str(),
+            ));
+        }
+        let state_merkle_tree_pubkeys = if state_merkle_tree_pubkeys.is_empty() {
+            None
+        } else {
+            Some(state_merkle_tree_pubkeys)
+        };
+        let hashes = if hashes.is_empty() {
+            None
+        } else {
+            Some(hashes)
+        };
+        let new_addresses = if new_addresses_with_trees.is_empty() {
+            None
+        } else {
+            Some(new_addresses_with_trees.iter().map(|x| x.address).collect())
+        };
+        let address_merkle_tree_pubkeys = if new_addresses_with_trees.is_empty() {
+            None
+        } else {
+            Some(new_addresses_with_trees.iter().map(|x| x.tree).collect())
+        };
+        self.indexer()?
+            .create_proof_for_compressed_accounts2(
+                compressed_accounts,
+                state_merkle_tree_pubkeys,
+                new_addresses,
+                address_merkle_tree_pubkeys,
+                rpc,
+            )
+            .await
     }
 }
 

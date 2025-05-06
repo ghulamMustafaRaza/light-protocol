@@ -45,7 +45,7 @@ use crate::{
     conversions::{program_to_sdk_token_data, sdk_to_program_token_data},
 };
 
-pub async fn mint_tokens_helper<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn mint_tokens_helper<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     rpc: &mut R,
     test_indexer: &mut I,
     merkle_tree_pubkey: &Pubkey,
@@ -108,7 +108,7 @@ pub async fn mint_spl_tokens<R: RpcConnection>(
 #[allow(clippy::too_many_arguments)]
 pub async fn mint_tokens_helper_with_lamports<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     rpc: &mut R,
     test_indexer: &mut I,
@@ -135,7 +135,7 @@ pub async fn mint_tokens_helper_with_lamports<
 #[allow(clippy::too_many_arguments)]
 pub async fn mint_tokens_22_helper_with_lamports<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     rpc: &mut R,
     test_indexer: &mut I,
@@ -165,7 +165,7 @@ pub async fn mint_tokens_22_helper_with_lamports<
 #[allow(clippy::too_many_arguments)]
 pub async fn mint_tokens_22_helper_with_lamports_and_bump<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     rpc: &mut R,
     test_indexer: &mut I,
@@ -495,10 +495,7 @@ pub async fn create_token_2022_account<R: RpcConnection>(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn compressed_transfer_test<
-    R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
->(
+pub async fn compressed_transfer_test<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     payer: &Keypair,
     rpc: &mut R,
     test_indexer: &mut I,
@@ -535,7 +532,7 @@ pub async fn compressed_transfer_test<
 #[allow(clippy::too_many_arguments)]
 pub async fn compressed_transfer_22_test<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     payer: &Keypair,
     rpc: &mut R,
@@ -742,7 +739,7 @@ pub async fn compressed_transfer_22_test<
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn decompress_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn decompress_test<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     payer: &Keypair,
     rpc: &mut R,
     test_indexer: &mut I,
@@ -950,7 +947,7 @@ pub async fn decompress_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtens
 #[allow(clippy::too_many_arguments)]
 pub async fn perform_compress_spl_token_account<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     rpc: &mut R,
     test_indexer: &mut I,
@@ -1029,7 +1026,7 @@ pub async fn perform_compress_spl_token_account<
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn compress_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn compress_test<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     payer: &Keypair,
     rpc: &mut R,
     test_indexer: &mut I,
@@ -1133,7 +1130,7 @@ pub async fn compress_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensio
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn approve_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn approve_test<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     authority: &Keypair,
     rpc: &mut R,
     test_indexer: &mut I,
@@ -1306,7 +1303,7 @@ pub async fn approve_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtension
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn revoke_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn revoke_test<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     authority: &Keypair,
     rpc: &mut R,
     test_indexer: &mut I,
@@ -1425,7 +1422,7 @@ pub async fn revoke_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions
     .await;
 }
 
-pub async fn freeze_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn freeze_test<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     authority: &Keypair,
     rpc: &mut R,
     test_indexer: &mut I,
@@ -1444,7 +1441,7 @@ pub async fn freeze_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions
     .await;
 }
 
-pub async fn thaw_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn thaw_test<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     authority: &Keypair,
     rpc: &mut R,
     test_indexer: &mut I,
@@ -1466,7 +1463,7 @@ pub async fn thaw_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R
 pub async fn freeze_or_thaw_test<
     R: RpcConnection,
     const FREEZE: bool,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     authority: &Keypair,
     rpc: &mut R,
@@ -1604,7 +1601,7 @@ pub async fn freeze_or_thaw_test<
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn burn_test<R: RpcConnection, I: Indexer<R> + TestIndexerExtensions<R>>(
+pub async fn burn_test<R: RpcConnection, I: Indexer + TestIndexerExtensions<R>>(
     authority: &Keypair,
     rpc: &mut R,
     test_indexer: &mut I,
@@ -1750,7 +1747,7 @@ pub enum BurnInstructionMode {
 #[allow(clippy::too_many_arguments)]
 pub async fn create_burn_test_instruction<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     authority: &Keypair,
     rpc: &mut R,

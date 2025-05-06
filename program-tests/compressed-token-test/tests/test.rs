@@ -1594,7 +1594,7 @@ async fn test_decompression() {
 #[allow(clippy::too_many_arguments)]
 pub async fn mint_tokens_to_all_token_pools<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     rpc: &mut R,
     test_indexer: &mut I,
@@ -4836,7 +4836,7 @@ async fn test_failing_decompression() {
 #[allow(clippy::too_many_arguments)]
 pub async fn failing_compress_decompress<
     R: RpcConnection,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 >(
     payer: &Keypair,
     rpc: &mut R,

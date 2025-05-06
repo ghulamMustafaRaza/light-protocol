@@ -2828,7 +2828,7 @@ pub mod local_sdk {
     #[allow(clippy::too_many_arguments)]
     pub async fn perform_test_transaction<
         R: RpcConnection,
-        I: Indexer<R> + TestIndexerExtensions<R>,
+        I: Indexer + TestIndexerExtensions<R>,
     >(
         rpc: &mut R,
         test_indexer: &mut I,

@@ -7,7 +7,9 @@ repository = "https://github.com/lightprotocol/light-protocol"
 description = "Client library for Light Protocol"
 
 [features]
-devenv = []
+devenv = ["v2"]
+v2 = []
+program-test = ["solana-banks-client"]
 
 [dependencies]
 # Solana dependencies
@@ -28,18 +30,15 @@ solana-account = { workspace = true }
 solana-epoch-info = { workspace = true }
 solana-keypair = { workspace = true }
 solana-compute-budget-interface = { workspace = true }
-solana-banks-client = { workspace = true }
+solana-banks-client = { workspace = true, optional = true }
 
 # Light Protocol dependencies
 light-merkle-tree-metadata = { workspace = true, features = ["anchor"] }
 light-concurrent-merkle-tree = { workspace = true }
 light-indexed-merkle-tree = { workspace = true }
-light-merkle-tree-reference = { workspace = true }
-light-prover-client = { workspace = true }
 light-sdk = { workspace = true, features = ["anchor"] }
 light-hasher = { workspace = true }
 light-compressed-account = { workspace = true, features = ["anchor"] }
-light-indexed-array = { workspace = true }
 photon-api = { workspace = true }
 
 # External dependencies

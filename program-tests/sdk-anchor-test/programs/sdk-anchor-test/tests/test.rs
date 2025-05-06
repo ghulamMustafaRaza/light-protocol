@@ -141,7 +141,7 @@ async fn with_nested_data<R, I>(
 ) -> Result<(), RpcError>
 where
     R: RpcConnection + MerkleTreeExt,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 {
     let config = SystemAccountMetaConfig::new(sdk_anchor_test::ID);
     let mut remaining_accounts = PackedAccounts::default();
@@ -213,7 +213,7 @@ async fn update_nested_data<R, I>(
 ) -> Result<(), RpcError>
 where
     R: RpcConnection + MerkleTreeExt,
-    I: Indexer<R> + TestIndexerExtensions<R>,
+    I: Indexer + TestIndexerExtensions<R>,
 {
     let mut remaining_accounts = PackedAccounts::default();
 

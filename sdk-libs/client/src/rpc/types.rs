@@ -1,5 +1,3 @@
-use borsh::{BorshDeserialize, BorshSerialize};
-use light_compressed_account::instruction_data::compressed_proof::CompressedProof;
 use light_indexed_merkle_tree::array::IndexedElement;
 use num_bigint::BigUint;
 use solana_pubkey::Pubkey;
@@ -27,19 +25,4 @@ pub struct NewAddressProofWithContext {
     pub new_low_element: Option<IndexedElement<usize>>,
     pub new_element: Option<IndexedElement<usize>>,
     pub new_element_next_value: Option<BigUint>,
-}
-
-#[derive(Debug, Clone, BorshDeserialize, BorshSerialize)]
-pub struct ProofRpcResult {
-    pub proof: CompressedProof,
-    pub root_indices: Vec<Option<u16>>,
-    pub address_root_indices: Vec<u16>,
-}
-
-#[derive(Debug, Default)]
-pub struct ProofRpcResultV2 {
-    pub proof: Option<CompressedProof>,
-    // If none -> proof by index  and not included in zkp, else included in zkp
-    pub root_indices: Vec<Option<u16>>,
-    pub address_root_indices: Vec<u16>,
 }

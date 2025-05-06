@@ -6,6 +6,7 @@ use light_batched_merkle_tree::{
     initialize_address_tree::InitAddressTreeAccountsInstructionData,
     initialize_state_tree::InitStateTreeAccountsInstructionData,
 };
+use light_client::rpc::RpcError;
 use light_registry::{
     account_compression_cpi::sdk::get_registered_program_pda,
     protocol_config::state::ProtocolConfig,
@@ -27,27 +28,41 @@ use crate::{
 pub const CPI_CONTEXT_ACCOUNT_RENT: u64 = 143487360; // lamports of the cpi context account
 
 pub struct ProgramTestConfig {
-    additional_programs: Option<Vec<(&'static str, Pubkey)>>,
-    protocol_config: ProtocolConfig,
-    register_forester_and_advance_to_active_phase: bool,
-    batched_tree_init_params: InitStateTreeAccountsInstructionData,
-    batched_address_tree_init_params: InitAddressTreeAccountsInstructionData,
-    with_prover: bool,
+    pub additional_programs: Option<Vec<(&'static str, Pubkey)>>,
+    pub protocol_config: ProtocolConfig,
+    pub register_forester_and_advance_to_active_phase: bool,
+    pub with_prover: bool,
+    pub skip_register_programs: bool,
+    pub skip_second_v1_tree: bool,
+    pub v1_state_tree_config: StateMerkleTreeConfig,
+    pub v1_nullifier_queue_config: NullifierQueueConfig,
+    pub v1_address_tree_config: AddressMerkleTreeConfig,
+    pub v1_address_queue_config: AddressQueueConfig,
+    pub batched_tree_init_params: Option<InitStateTreeAccountsInstructionData>,
+    pub batched_address_tree_init_params: Option<InitAddressTreeAccountsInstructionData>,
 }
 
 impl ProgramTestConfig {
     pub fn new(
-        additional_programs: Option<Vec<(&'static str, Pubkey)>>,
         with_prover: bool,
+        additional_programs: Option<Vec<(&'static str, Pubkey)>>,
     ) -> Self {
         Self {
             additional_programs,
-            protocol_config: ProtocolConfig::default(),
-            register_forester_and_advance_to_active_phase: true,
-            batched_tree_init_params: InitStateTreeAccountsInstructionData::test_default(),
-            batched_address_tree_init_params: InitAddressTreeAccountsInstructionData::test_default(
-            ),
             with_prover,
+            ..Default::default()
+        }
+    }
+
+    pub fn default_with_batched_trees() -> Self {
+        Self {
+            additional_programs: None,
+            with_prover: false,
+            batched_tree_init_params: Some(InitStateTreeAccountsInstructionData::test_default()),
+            batched_address_tree_init_params: Some(
+                InitAddressTreeAccountsInstructionData::test_default(),
+            ),
+            ..Default::default()
         }
     }
 }
@@ -56,11 +71,24 @@ impl Default for ProgramTestConfig {
     fn default() -> Self {
         Self {
             additional_programs: None,
-            protocol_config: ProtocolConfig::default(),
+            protocol_config: ProtocolConfig {
+                // Init with an active epoch which doesn't end
+                active_phase_length: 1_000_000_000,
+                slot_length: 1_000_000_000 - 1,
+                genesis_slot: 0,
+                registration_phase_length: 2,
+                ..Default::default()
+            },
             register_forester_and_advance_to_active_phase: true,
-            batched_tree_init_params: InitStateTreeAccountsInstructionData::default(),
-            batched_address_tree_init_params: InitAddressTreeAccountsInstructionData::default(),
             with_prover: true,
+            skip_second_v1_tree: false,
+            skip_register_programs: false,
+            v1_state_tree_config: StateMerkleTreeConfig::default(),
+            v1_address_tree_config: AddressMerkleTreeConfig::default(),
+            v1_address_queue_config: AddressQueueConfig::default(),
+            v1_nullifier_queue_config: NullifierQueueConfig::default(),
+            batched_tree_init_params: None,
+            batched_address_tree_init_params: None,
         }
     }
 }
@@ -124,104 +152,26 @@ pub async fn setup_test_programs(
 /// - registers a forester
 /// - advances to the active phase slot 2
 /// - active phase doesn't end
-// TODO(vadorovsky): Remove this function...
 pub async fn setup_test_programs_with_accounts(
-    additional_programs: Option<Vec<(&'static str, Pubkey)>>,
-) -> (ProgramTestRpcConnection, EnvAccounts) {
-    setup_test_programs_with_accounts_with_protocol_config(
-        additional_programs,
-        ProtocolConfig {
-            // Init with an active epoch which doesn't end
-            active_phase_length: 1_000_000_000,
-            slot_length: 1_000_000_000 - 1,
-            genesis_slot: 0,
-            registration_phase_length: 2,
-            ..Default::default()
-        },
-        true,
-    )
-    .await
-}
-
-/// Setup test programs with accounts
-/// deploys:
-/// 1. light program
-/// 2. account_compression program
-/// 3. light_compressed_token program
-/// 4. light_system_program program
-///
-/// Sets up the following accounts:
-/// 5. creates and initializes governance authority
-/// 6. creates and initializes group authority
-/// 7. registers the light_system_program program with the group authority
-/// 8. initializes Merkle tree owned by
-/// Note:
-/// - registers a forester
-/// - advances to the active phase slot 2
-/// - active phase doesn't end
-pub async fn setup_test_programs_with_accounts_v2(
-    additional_programs: Option<Vec<(&'static str, Pubkey)>>,
-) -> (ProgramTestRpcConnection, EnvAccounts) {
-    setup_test_programs_with_accounts_with_protocol_config_v2(
-        additional_programs,
-        ProtocolConfig {
-            // Init with an active epoch which doesn't end
-            active_phase_length: 1_000_000_000,
-            slot_length: 1_000_000_000 - 1,
-            genesis_slot: 0,
-            registration_phase_length: 2,
-            ..Default::default()
-        },
-        true,
-    )
-    .await
-}
-
-pub async fn setup_test_programs_with_accounts_with_protocol_config(
-    additional_programs: Option<Vec<(&'static str, Pubkey)>>,
-    protocol_config: ProtocolConfig,
-    register_forester_and_advance_to_active_phase: bool,
-) -> (ProgramTestRpcConnection, EnvAccounts) {
-    setup_test_programs_with_accounts_with_protocol_config_and_batched_tree_params(
-        additional_programs,
-        protocol_config,
-        register_forester_and_advance_to_active_phase,
-        InitStateTreeAccountsInstructionData::test_default(),
-        InitAddressTreeAccountsInstructionData::test_default(),
-    )
-    .await
-}
-
-pub async fn setup_test_programs_with_accounts_with_protocol_config_and_batched_tree_params(
-    additional_programs: Option<Vec<(&'static str, Pubkey)>>,
-    protocol_config: ProtocolConfig,
-    register_forester_and_advance_to_active_phase: bool,
-    batched_tree_init_params: InitStateTreeAccountsInstructionData,
-    batched_address_tree_init_params: InitAddressTreeAccountsInstructionData,
-) -> (ProgramTestRpcConnection, EnvAccounts) {
-    common_setup_test_programs(ProgramTestConfig {
-        additional_programs,
-        protocol_config,
-        register_forester_and_advance_to_active_phase,
-        batched_tree_init_params,
-        batched_address_tree_init_params,
-        with_prover: false,
-    })
-    .await
-}
-
-pub async fn common_setup_test_programs(
     config: ProgramTestConfig,
-) -> (ProgramTestRpcConnection, EnvAccounts) {
-    let ProgramTestConfig {
-        additional_programs,
-        protocol_config,
-        register_forester_and_advance_to_active_phase,
-        batched_tree_init_params,
-        batched_address_tree_init_params,
-        with_prover,
-    } = config;
-    let context = setup_test_programs(additional_programs).await;
+) -> Result<(ProgramTestRpcConnection, EnvAccounts), RpcError> {
+    // let ProgramTestConfig {
+    //     additional_programs,
+    //     protocol_config,
+    //     register_forester_and_advance_to_active_phase,
+    //     batched_tree_init_params,
+    //     batched_address_tree_init_params,
+    //     with_prover,
+    //     skip_register_programs,
+    //     skip_second_v1_tree,
+    //     v1_state_tree_config,
+    //     v1_nullifier_queue_config,
+    //     v1_address_tree_config,
+    //     v1_address_queue_config,
+    //     batched_tree_init_params,
+    //     batched_address_tree_init_params,
+    // } = config;
+    let context = setup_test_programs(config.additional_programs.clone()).await;
     let mut context = ProgramTestRpcConnection::new(context);
     let keypairs = EnvAccountKeypairs::program_test_default();
     println!(
@@ -245,60 +195,92 @@ pub async fn common_setup_test_programs(
         .unwrap();
     let env_accounts = initialize_accounts(
         &mut context,
+        &config,
         keypairs,
-        protocol_config,
-        register_forester_and_advance_to_active_phase,
-        true,
-        false,
-        StateMerkleTreeConfig::default(),
-        NullifierQueueConfig::default(),
-        AddressMerkleTreeConfig::default(),
-        AddressQueueConfig::default(),
-        batched_tree_init_params,
-        Some(batched_address_tree_init_params),
+        // register_forester_and_advance_to_active_phase,
+        // true,
+        // false,
+        // StateMerkleTreeConfig::default(),
+        // NullifierQueueConfig::default(),
+        // AddressMerkleTreeConfig::default(),
+        // AddressQueueConfig::default(),
+        // batched_tree_init_params,
+        // Some(batched_address_tree_init_params),
     )
-    .await;
+    .await?;
     context
-        .add_indexer(&env_accounts, with_prover)
-        .await
-        .unwrap();
-    (context, env_accounts)
+        .add_indexer(&env_accounts, config.with_prover)
+        .await?;
+    Ok((context, env_accounts))
 }
 
-// TODO(vadorovsky): ...in favor of this one.
-pub async fn setup_test_programs_with_accounts_with_protocol_config_v2(
-    additional_programs: Option<Vec<(&'static str, Pubkey)>>,
-    protocol_config: ProtocolConfig,
-    register_forester_and_advance_to_active_phase: bool,
-) -> (ProgramTestRpcConnection, EnvAccounts) {
-    let context = setup_test_programs(additional_programs).await;
-    let mut context = ProgramTestRpcConnection::new(context);
-    let keypairs = EnvAccountKeypairs::program_test_default();
-    airdrop_lamports(
-        &mut context,
-        &keypairs.governance_authority.pubkey(),
-        100_000_000_000,
-    )
-    .await
-    .unwrap();
-    airdrop_lamports(&mut context, &keypairs.forester.pubkey(), 10_000_000_000)
-        .await
-        .unwrap();
-    let params = InitStateTreeAccountsInstructionData::test_default();
-    let env_accounts = initialize_accounts(
-        &mut context,
-        keypairs,
-        protocol_config,
-        register_forester_and_advance_to_active_phase,
-        true,
-        false,
-        StateMerkleTreeConfig::default(),
-        NullifierQueueConfig::default(),
-        AddressMerkleTreeConfig::default(),
-        AddressQueueConfig::default(),
-        params,
-        Some(InitAddressTreeAccountsInstructionData::test_default()),
-    )
-    .await;
-    (context, env_accounts)
-}
+// pub async fn setup_test_programs_with_accounts_with_protocol_config(
+//     additional_programs: Option<Vec<(&'static str, Pubkey)>>,
+//     protocol_config: ProtocolConfig,
+//     register_forester_and_advance_to_active_phase: bool,
+// ) -> (ProgramTestRpcConnection, EnvAccounts) {
+//     setup_test_programs_with_accounts_with_protocol_config_and_batched_tree_params(
+//         additional_programs,
+//         protocol_config,
+//         register_forester_and_advance_to_active_phase,
+//         InitStateTreeAccountsInstructionData::test_default(),
+//         InitAddressTreeAccountsInstructionData::test_default(),
+//     )
+//     .await
+// }
+
+// pub async fn setup_test_programs_with_accounts_with_protocol_config_and_batched_tree_params(
+//     additional_programs: Option<Vec<(&'static str, Pubkey)>>,
+//     protocol_config: ProtocolConfig,
+//     register_forester_and_advance_to_active_phase: bool,
+//     batched_tree_init_params: InitStateTreeAccountsInstructionData,
+//     batched_address_tree_init_params: InitAddressTreeAccountsInstructionData,
+// ) -> (ProgramTestRpcConnection, EnvAccounts) {
+//     common_setup_test_programs(ProgramTestConfig {
+//         additional_programs,
+//         protocol_config,
+//         register_forester_and_advance_to_active_phase,
+//         batched_tree_init_params,
+//         batched_address_tree_init_params,
+//         with_prover: false,
+//     })
+//     .await
+// }
+
+// // TODO(vadorovsky): ...in favor of this one.
+// pub async fn setup_test_programs_with_accounts_with_protocol_config_v2(
+//     additional_programs: Option<Vec<(&'static str, Pubkey)>>,
+//     protocol_config: ProtocolConfig,
+//     register_forester_and_advance_to_active_phase: bool,
+// ) -> (ProgramTestRpcConnection, EnvAccounts) {
+//     let context = setup_test_programs(additional_programs).await;
+//     let mut context = ProgramTestRpcConnection::new(context);
+//     let keypairs = EnvAccountKeypairs::program_test_default();
+//     airdrop_lamports(
+//         &mut context,
+//         &keypairs.governance_authority.pubkey(),
+//         100_000_000_000,
+//     )
+//     .await
+//     .unwrap();
+//     airdrop_lamports(&mut context, &keypairs.forester.pubkey(), 10_000_000_000)
+//         .await
+//         .unwrap();
+//     let params = InitStateTreeAccountsInstructionData::test_default();
+//     let env_accounts = initialize_accounts(
+//         &mut context,
+//         keypairs,
+//         protocol_config,
+//         register_forester_and_advance_to_active_phase,
+//         true,
+//         false,
+//         StateMerkleTreeConfig::default(),
+//         NullifierQueueConfig::default(),
+//         AddressMerkleTreeConfig::default(),
+//         AddressQueueConfig::default(),
+//         params,
+//         Some(InitAddressTreeAccountsInstructionData::test_default()),
+//     )
+//     .await;
+//     (context, env_accounts)
+// }

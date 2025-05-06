@@ -83,7 +83,7 @@ pub async fn run_queue_info(
     }
 }
 
-pub async fn run_pipeline<R: RpcConnection, I: Indexer<R> + IndexerType<R>>(
+pub async fn run_pipeline<R: RpcConnection, I: Indexer + IndexerType<R>>(
     config: Arc<ForesterConfig>,
     rpc_rate_limiter: Option<RateLimiter>,
     send_tx_rate_limiter: Option<RateLimiter>,

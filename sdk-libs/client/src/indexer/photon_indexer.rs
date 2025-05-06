@@ -5,13 +5,12 @@ use bs58;
 use light_compressed_account::compressed_account::{
     CompressedAccount, CompressedAccountData, CompressedAccountWithMerkleContext, MerkleContext,
 };
-use light_merkle_tree_metadata::QueueType;
+
 use light_sdk::token::{AccountState, TokenData, TokenDataWithMerkleContext};
 use photon_api::{
     apis::configuration::{ApiKey, Configuration},
     models::{
-        Account, CompressedProofWithContext, CompressedProofWithContextV2,
-        GetCompressedAccountsByOwnerPostRequestParams,
+        Account, GetCompressedAccountsByOwnerPostRequestParams,
         GetCompressedTokenAccountsByOwnerPostRequestParams,
         GetCompressedTokenAccountsByOwnerV2PostRequest, TokenBalanceList,
     },
@@ -19,29 +18,28 @@ use photon_api::{
 use solana_pubkey::Pubkey;
 use tracing::{debug, error, warn};
 
-use super::{AddressQueueIndex, BatchAddressUpdateIndexerResponse, MerkleProofWithContext};
-use crate::{
-    indexer::{
-        Address, AddressMerkleTreeBundle, AddressWithTree, Base58Conversions,
-        FromPhotonTokenAccountList, Hash, Indexer, IndexerError, MerkleProof,
-        NewAddressProofWithContext,
-    },
-    rpc::{types::ProofRpcResult, RpcConnection},
+use super::ProofRpcResult;
+use crate::indexer::{
+    Address, AddressWithTree, Base58Conversions, FromPhotonTokenAccountList, Hash, Indexer,
+    IndexerError, MerkleProof, NewAddressProofWithContext,
+};
+#[cfg(feature = "v2")]
+use {
+    super::{AddressQueueIndex, BatchAddressUpdateIndexerResponse, MerkleProofWithContext},
+    light_merkle_tree_metadata::QueueType,
 };
 
-pub struct PhotonIndexer<R: RpcConnection> {
+pub struct PhotonIndexer {
     configuration: Configuration,
-    #[allow(dead_code)]
-    rpc: R,
 }
 
-impl<R: RpcConnection> PhotonIndexer<R> {
+impl PhotonIndexer {
     pub fn default_path() -> String {
         "http://127.0.0.1:8784".to_string()
     }
 }
 
-impl<R: RpcConnection> PhotonIndexer<R> {
+impl PhotonIndexer {
     async fn retry<F, Fut, T>(&self, mut operation: F) -> Result<T, IndexerError>
     where
         F: FnMut() -> Fut,
@@ -110,8 +108,8 @@ impl<R: RpcConnection> PhotonIndexer<R> {
     }
 }
 
-impl<R: RpcConnection> PhotonIndexer<R> {
-    pub fn new(path: String, api_key: Option<String>, rpc: R) -> Self {
+impl PhotonIndexer {
+    pub fn new(path: String, api_key: Option<String>) -> Self {
         let configuration = Configuration {
             base_path: path,
             api_key: api_key.map(|key| ApiKey {
@@ -121,15 +119,7 @@ impl<R: RpcConnection> PhotonIndexer<R> {
             ..Default::default()
         };
 
-        PhotonIndexer { configuration, rpc }
-    }
-
-    pub fn get_rpc(&self) -> &R {
-        &self.rpc
-    }
-
-    pub fn get_rpc_mut(&mut self) -> &mut R {
-        &mut self.rpc
+        PhotonIndexer { configuration }
     }
 
     fn extract_result<T>(context: &str, result: Option<T>) -> Result<T, IndexerError> {
@@ -156,7 +146,7 @@ impl<R: RpcConnection> PhotonIndexer<R> {
     }
 }
 
-impl<R: RpcConnection> Debug for PhotonIndexer<R> {
+impl Debug for PhotonIndexer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PhotonIndexer")
             .field("configuration", &self.configuration)
@@ -165,7 +155,8 @@ impl<R: RpcConnection> Debug for PhotonIndexer<R> {
 }
 
 #[async_trait]
-impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
+impl Indexer for PhotonIndexer {
+    #[cfg(feature = "v2")]
     async fn get_queue_elements(
         &mut self,
         pubkey: [u8; 32],
@@ -244,24 +235,12 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         .await
     }
 
+    #[cfg(feature = "v2")]
     async fn get_subtrees(
         &self,
         _merkle_tree_pubkey: [u8; 32],
     ) -> Result<Vec<[u8; 32]>, IndexerError> {
         unimplemented!()
-    }
-
-    async fn create_proof_for_compressed_accounts(
-        &mut self,
-        _compressed_accounts: Option<Vec<[u8; 32]>>,
-        _state_merkle_tree_pubkeys: Option<Vec<Pubkey>>,
-        _new_addresses: Option<&[[u8; 32]]>,
-        _address_merkle_tree_pubkeys: Option<Vec<Pubkey>>,
-        _rpc: &mut R,
-    ) -> Result<ProofRpcResult, IndexerError> {
-        Err(IndexerError::NotImplemented(
-            "create_proof_for_compressed_accounts".to_string(),
-        ))
     }
 
     async fn get_multiple_compressed_account_proofs(
@@ -790,6 +769,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         .await
     }
 
+    #[cfg(feature = "v2")]
     async fn get_multiple_new_address_proofs_h40(
         &self,
         _merkle_tree_pubkey: [u8; 32],
@@ -802,7 +782,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         &self,
         hashes: Vec<Hash>,
         new_addresses_with_trees: Vec<AddressWithTree>,
-    ) -> Result<CompressedProofWithContext, IndexerError> {
+    ) -> Result<ProofRpcResult, IndexerError> {
         self.retry(|| async {
             let request = photon_api::models::GetValidityProofPostRequest {
                 params: Box::new(photon_api::models::GetValidityProofPostRequestParams {
@@ -828,16 +808,17 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
             .await?;
 
             let result = Self::extract_result("get_validity_proof", result.result)?;
-            Ok(*result.value)
+            ProofRpcResult::try_from(*result.value)
         })
         .await
     }
 
+    #[cfg(feature = "v2")]
     async fn get_validity_proof_v2(
         &self,
         hashes: Vec<Hash>,
         new_addresses_with_trees: Vec<AddressWithTree>,
-    ) -> Result<CompressedProofWithContextV2, IndexerError> {
+    ) -> Result<super::types::ProofRpcResultV2, IndexerError> {
         self.retry(|| async {
             let request = photon_api::models::GetValidityProofV2PostRequest {
                 params: Box::new(photon_api::models::GetValidityProofPostRequestParams {
@@ -862,12 +843,12 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
             .await?;
 
             let result = Self::extract_result("get_validity_proof_v2", result.result)?;
-            Ok(*result.value)
+            super::types::ProofRpcResultV2::try_from(*result.value)
         })
         .await
     }
 
-    async fn get_indexer_slot(&self, _r: &mut R) -> Result<u64, IndexerError> {
+    async fn get_indexer_slot(&self) -> Result<u64, IndexerError> {
         self.retry(|| async {
             let request = photon_api::models::GetIndexerSlotPostRequest {
                 ..Default::default()
@@ -883,10 +864,7 @@ impl<R: RpcConnection> Indexer<R> for PhotonIndexer<R> {
         .await
     }
 
-    fn get_address_merkle_trees(&self) -> &Vec<AddressMerkleTreeBundle> {
-        todo!()
-    }
-
+    #[cfg(feature = "v2")]
     async fn get_address_queue_with_proofs(
         &mut self,
         merkle_tree_pubkey: &Pubkey,

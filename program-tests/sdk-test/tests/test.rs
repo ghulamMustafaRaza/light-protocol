@@ -1,4 +1,4 @@
-#![cfg(feature = "test-sbf")]
+// #![cfg(feature = "test-sbf")]
 
 use borsh::BorshSerialize;
 use light_client::{
@@ -11,7 +11,7 @@ use light_compressed_account::{
 };
 use light_program_test::{
     indexer::{TestIndexer, TestIndexerExtensions},
-    test_env::setup_test_programs_with_accounts_v2,
+    test_env::{setup_test_programs_with_accounts, ProgramTestConfig},
     test_rpc::ProgramTestRpcConnection,
 };
 use light_prover_client::gnark::helpers::{ProofType, ProverConfig};
@@ -36,20 +36,20 @@ use solana_sdk::{
 
 #[tokio::test]
 async fn test_sdk_test() {
-    let (mut rpc, env) =
-        setup_test_programs_with_accounts_v2(Some(vec![("sdk_test", sdk_test::ID)])).await;
+    let config = ProgramTestConfig::new(with_prover, Some(vec![("sdk_test", sdk_test::ID)]));
+    let (mut rpc, env) = setup_test_programs_with_accounts(config).await;
     let payer = rpc.get_payer().insecure_clone();
 
-    let mut test_indexer: TestIndexer<ProgramTestRpcConnection> = TestIndexer::init_from_env(
-        &payer,
-        &env,
-        // None,
-        Some(ProverConfig {
-            circuits: vec![ProofType::Inclusion, ProofType::NonInclusion],
-            run_mode: None,
-        }),
-    )
-    .await;
+    // let mut test_indexer: TestIndexer<ProgramTestRpcConnection> = TestIndexer::init_from_env(
+    //     &payer,
+    //     &env,
+    //     // None,
+    //     Some(ProverConfig {
+    //         circuits: vec![ProofType::Inclusion, ProofType::NonInclusion],
+    //         run_mode: None,
+    //     }),
+    // )
+    // .await;
 
     let address_merkle_context = AddressMerkleContext {
         address_merkle_tree_pubkey: env.batch_address_merkle_tree,
@@ -106,7 +106,7 @@ async fn test_sdk_test() {
 pub async fn create_pda(
     payer: &Keypair,
     rpc: &mut ProgramTestRpcConnection,
-    test_indexer: &mut TestIndexer<ProgramTestRpcConnection>,
+    // test_indexer: &mut TestIndexer<ProgramTestRpcConnection>,
     merkle_tree_pubkey: &Pubkey,
     account_data: [u8; 31],
     address_merkle_context: AddressMerkleContext,
@@ -117,7 +117,7 @@ pub async fn create_pda(
     accounts.add_pre_accounts_signer(payer.pubkey());
     accounts.add_system_accounts(system_account_meta_config);
 
-    let rpc_result = test_indexer
+    let rpc_result = rpc
         .create_proof_for_compressed_accounts(
             None,
             None,

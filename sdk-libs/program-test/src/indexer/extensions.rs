@@ -15,7 +15,9 @@ use light_sdk::token::TokenDataWithMerkleContext;
 use solana_sdk::signature::Keypair;
 
 #[async_trait]
-pub trait TestIndexerExtensions<R: RpcConnection>: Indexer<R> {
+pub trait TestIndexerExtensions<R: RpcConnection> {
+    fn get_address_merkle_trees(&self) -> &Vec<AddressMerkleTreeBundle>;
+
     fn get_address_merkle_tree(
         &self,
         merkle_tree_pubkey: Pubkey,
@@ -48,6 +50,15 @@ pub trait TestIndexerExtensions<R: RpcConnection>: Indexer<R> {
     fn get_payer(&self) -> &Keypair;
 
     fn get_group_pda(&self) -> &Pubkey;
+
+    async fn create_proof_for_compressed_accounts(
+        &mut self,
+        compressed_accounts: Option<Vec<[u8; 32]>>,
+        state_merkle_tree_pubkeys: Option<Vec<Pubkey>>,
+        new_addresses: Option<&[[u8; 32]]>,
+        address_merkle_tree_pubkeys: Option<Vec<Pubkey>>,
+        rpc: &mut R,
+    ) -> Result<ProofRpcResult, IndexerError>;
 
     async fn create_proof_for_compressed_accounts2(
         &mut self,

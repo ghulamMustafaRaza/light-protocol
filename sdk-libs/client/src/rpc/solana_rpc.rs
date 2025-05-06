@@ -3,6 +3,8 @@ use std::{
     time::Duration,
 };
 
+use crate::indexer::AddressWithTree;
+use crate::indexer::{Indexer, ProofRpcResult};
 use async_trait::async_trait;
 use borsh::BorshDeserialize;
 use bs58;
@@ -29,7 +31,10 @@ use tracing::warn;
 
 #[cfg(feature = "devenv")]
 use crate::fee::{assert_transaction_params, TransactionParams};
-use crate::rpc::{errors::RpcError, merkle_tree::MerkleTreeExt, rpc_connection::RpcConnection};
+use crate::{
+    indexer::photon_indexer::PhotonIndexer,
+    rpc::{errors::RpcError, merkle_tree::MerkleTreeExt, rpc_connection::RpcConnection},
+};
 
 pub enum SolanaRpcUrl {
     Testnet,
@@ -76,6 +81,7 @@ pub struct SolanaRpcConnection {
     pub client: RpcClient,
     pub payer: Keypair,
     pub retry_config: RetryConfig,
+    pub indexer: Option<PhotonIndexer>,
 }
 
 impl Debug for SolanaRpcConnection {
@@ -103,7 +109,12 @@ impl SolanaRpcConnection {
             client,
             payer,
             retry_config,
+            indexer: None,
         }
+    }
+
+    pub fn add_indexer(&mut self, path: String, api_key: Option<String>) {
+        self.indexer = Some(PhotonIndexer::new(path, api_key));
     }
 
     async fn retry<F, Fut, T>(&self, operation: F) -> Result<T, RpcError>
@@ -675,6 +686,39 @@ impl RpcConnection for SolanaRpcConnection {
             .await?;
         let event = res.map(|e| (e.0[0].event.clone(), e.1, e.2));
         Ok(event)
+    }
+
+    async fn get_validity_proof(
+        &self,
+        hashes: Vec<[u8; 32]>,
+        new_addresses_with_trees: Vec<AddressWithTree>,
+    ) -> Result<ProofRpcResult, RpcError> {
+        if let Some(indexer) = self.indexer.as_ref() {
+            Ok(indexer
+                .get_validity_proof(hashes, new_addresses_with_trees)
+                .await?)
+        } else {
+            Err(RpcError::IndexerNotInitialized)
+        }
+    }
+
+    #[cfg(feature = "v2")]
+    async fn get_validity_proof_v2(
+        &self,
+        hashes: Vec<[u8; 32]>,
+        new_addresses_with_trees: Vec<AddressWithTree>,
+    ) -> Result<crate::indexer::ProofRpcResultV2, RpcError> {
+        if let Some(indexer) = self.indexer.as_ref() {
+            Ok(indexer
+                .get_validity_proof_v2(hashes, new_addresses_with_trees)
+                .await?)
+        } else {
+            Err(RpcError::IndexerNotInitialized)
+        }
+    }
+
+    fn indexer(&self) -> Result<&impl Indexer, RpcError> {
+        self.indexer.as_ref().ok_or(RpcError::IndexerNotInitialized)
     }
 }
 

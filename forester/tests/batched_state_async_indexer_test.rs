@@ -320,7 +320,7 @@ async fn print_queue_states(
     println!("queue metadata: {:?}", output_queue.get_metadata());
 }
 
-async fn get_token_accounts<R: RpcConnection, I: Indexer<R>>(
+async fn get_token_accounts<R: RpcConnection, I: Indexer>(
     indexer: &I,
     owner: &Pubkey,
     mint: &Pubkey,
@@ -333,7 +333,7 @@ async fn get_token_accounts<R: RpcConnection, I: Indexer<R>>(
     accounts
 }
 
-async fn validate_compressed_accounts_proof<R: RpcConnection, I: Indexer<R>>(
+async fn validate_compressed_accounts_proof<R: RpcConnection, I: Indexer>(
     indexer: &I,
     input_compressed_accounts: &[TokenDataWithMerkleContext],
 ) {
@@ -356,7 +356,7 @@ async fn validate_compressed_accounts_proof<R: RpcConnection, I: Indexer<R>>(
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn execute_test_transactions<R: RpcConnection, I: Indexer<R>>(
+async fn execute_test_transactions<R: RpcConnection, I: Indexer>(
     rpc: &mut R,
     indexer: &mut I,
     rng: &mut StdRng,
@@ -625,7 +625,7 @@ async fn mint_to<R: RpcConnection>(
         .unwrap()
 }
 
-async fn compressed_token_transfer<R: RpcConnection, I: Indexer<R>>(
+async fn compressed_token_transfer<R: RpcConnection, I: Indexer>(
     rpc: &mut R,
     indexer: &I,
     merkle_tree_pubkey: &Pubkey,
@@ -757,7 +757,7 @@ async fn compressed_token_transfer<R: RpcConnection, I: Indexer<R>>(
     sig
 }
 
-async fn transfer<R: RpcConnection, I: Indexer<R>>(
+async fn transfer<R: RpcConnection, I: Indexer>(
     rpc: &mut R,
     indexer: &I,
     merkle_tree_pubkey: &Pubkey,
@@ -924,7 +924,7 @@ async fn compress<R: RpcConnection>(
     }
 }
 
-async fn create_v1_address<R: RpcConnection, I: Indexer<R>>(
+async fn create_v1_address<R: RpcConnection, I: Indexer>(
     rpc: &mut R,
     indexer: &mut I,
     rng: &mut StdRng,
